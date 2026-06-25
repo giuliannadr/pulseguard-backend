@@ -14,6 +14,8 @@ const prisma_module_1 = require("./prisma/prisma.module");
 const monitors_module_1 = require("./monitors/monitors.module");
 const checker_module_1 = require("./checker/checker.module");
 const scheduler_module_1 = require("./scheduler/scheduler.module");
+const github_module_1 = require("./github/github.module");
+const ai_module_1 = require("./ai/ai.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -26,6 +28,8 @@ exports.AppModule = AppModule = __decorate([
             checker_module_1.CheckerModule,
             monitors_module_1.MonitorsModule,
             scheduler_module_1.SchedulerModule,
+            github_module_1.GithubModule,
+            ai_module_1.AiModule,
         ],
     })
 ], AppModule);

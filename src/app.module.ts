@@ -5,6 +5,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { MonitorsModule } from './monitors/monitors.module';
 import { CheckerModule } from './checker/checker.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
+import { GithubModule } from './github/github.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -14,6 +16,8 @@ import { SchedulerModule } from './scheduler/scheduler.module';
     CheckerModule,
     MonitorsModule,
     SchedulerModule,
+    GithubModule,
+    AiModule,
   ],
 })
 export class AppModule {}

@@ -8,84 +8,94 @@ export declare class MonitorsService {
     constructor(prisma: PrismaService, checker: CheckerService);
     findAll(userId: string): import("@prisma/client").Prisma.PrismaPromise<({
         checks: {
-            id: string;
-            checkedAt: Date;
-            monitorId: string;
             status: string;
             statusCode: number | null;
             responseTimeMs: number | null;
             sslDaysLeft: number | null;
             errorMessage: string | null;
+            id: string;
+            checkedAt: Date;
+            monitorId: string;
         }[];
     } & {
-        id: string;
-        userId: string;
-        name: string;
         url: string;
+        name: string;
         expectedStatus: number;
         expectedText: string | null;
         intervalMinutes: number;
         isActive: boolean;
+        id: string;
+        userId: string;
+        githubRepoUrl: string | null;
+        githubWebhookId: string | null;
         createdAt: Date;
         updatedAt: Date;
     })[]>;
     findOne(id: string, userId: string): Promise<{
-        id: string;
-        userId: string;
-        name: string;
         url: string;
+        name: string;
         expectedStatus: number;
         expectedText: string | null;
         intervalMinutes: number;
         isActive: boolean;
+        id: string;
+        userId: string;
+        githubRepoUrl: string | null;
+        githubWebhookId: string | null;
         createdAt: Date;
         updatedAt: Date;
     }>;
     create(userId: string, dto: CreateMonitorDto): import("@prisma/client").Prisma.Prisma__MonitorClient<{
-        id: string;
-        userId: string;
-        name: string;
         url: string;
+        name: string;
         expectedStatus: number;
         expectedText: string | null;
         intervalMinutes: number;
         isActive: boolean;
+        id: string;
+        userId: string;
+        githubRepoUrl: string | null;
+        githubWebhookId: string | null;
         createdAt: Date;
         updatedAt: Date;
     }, never, import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     update(id: string, userId: string, dto: UpdateMonitorDto): Promise<{
-        id: string;
-        userId: string;
-        name: string;
         url: string;
+        name: string;
         expectedStatus: number;
         expectedText: string | null;
         intervalMinutes: number;
         isActive: boolean;
+        id: string;
+        userId: string;
+        githubRepoUrl: string | null;
+        githubWebhookId: string | null;
         createdAt: Date;
         updatedAt: Date;
     }>;
     remove(id: string, userId: string): Promise<{
-        id: string;
-        userId: string;
-        name: string;
         url: string;
+        name: string;
         expectedStatus: number;
         expectedText: string | null;
         intervalMinutes: number;
         isActive: boolean;
+        id: string;
+        userId: string;
+        githubRepoUrl: string | null;
+        githubWebhookId: string | null;
         createdAt: Date;
         updatedAt: Date;
     }>;
     getChecks(id: string, userId: string, limit?: number): Promise<{
-        id: string;
-        checkedAt: Date;
-        monitorId: string;
         status: string;
         statusCode: number | null;
         responseTimeMs: number | null;
         sslDaysLeft: number | null;
         errorMessage: string | null;
+        id: string;
+        checkedAt: Date;
+        monitorId: string;
     }[]>;
     getMetrics(id: string, userId: string): Promise<{
         uptime: null;
@@ -97,13 +107,13 @@ export declare class MonitorsService {
         totalChecks: number;
     }>;
     runCheckNow(id: string, userId: string): Promise<{
-        id: string;
-        checkedAt: Date;
-        monitorId: string;
         status: string;
         statusCode: number | null;
         responseTimeMs: number | null;
         sslDaysLeft: number | null;
         errorMessage: string | null;
+        id: string;
+        checkedAt: Date;
+        monitorId: string;
     }>;
 }

@@ -6,84 +6,94 @@ export declare class MonitorsController {
     constructor(service: MonitorsService);
     findAll(req: any): import("@prisma/client").Prisma.PrismaPromise<({
         checks: {
-            id: string;
-            checkedAt: Date;
-            monitorId: string;
             status: string;
             statusCode: number | null;
             responseTimeMs: number | null;
             sslDaysLeft: number | null;
             errorMessage: string | null;
+            id: string;
+            checkedAt: Date;
+            monitorId: string;
         }[];
     } & {
-        id: string;
-        userId: string;
-        name: string;
         url: string;
+        name: string;
         expectedStatus: number;
         expectedText: string | null;
         intervalMinutes: number;
         isActive: boolean;
+        id: string;
+        userId: string;
+        githubRepoUrl: string | null;
+        githubWebhookId: string | null;
         createdAt: Date;
         updatedAt: Date;
     })[]>;
     findOne(id: string, req: any): Promise<{
-        id: string;
-        userId: string;
-        name: string;
         url: string;
+        name: string;
         expectedStatus: number;
         expectedText: string | null;
         intervalMinutes: number;
         isActive: boolean;
+        id: string;
+        userId: string;
+        githubRepoUrl: string | null;
+        githubWebhookId: string | null;
         createdAt: Date;
         updatedAt: Date;
     }>;
     create(dto: CreateMonitorDto, req: any): import("@prisma/client").Prisma.Prisma__MonitorClient<{
-        id: string;
-        userId: string;
-        name: string;
         url: string;
+        name: string;
         expectedStatus: number;
         expectedText: string | null;
         intervalMinutes: number;
         isActive: boolean;
+        id: string;
+        userId: string;
+        githubRepoUrl: string | null;
+        githubWebhookId: string | null;
         createdAt: Date;
         updatedAt: Date;
     }, never, import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     update(id: string, dto: UpdateMonitorDto, req: any): Promise<{
-        id: string;
-        userId: string;
-        name: string;
         url: string;
+        name: string;
         expectedStatus: number;
         expectedText: string | null;
         intervalMinutes: number;
         isActive: boolean;
+        id: string;
+        userId: string;
+        githubRepoUrl: string | null;
+        githubWebhookId: string | null;
         createdAt: Date;
         updatedAt: Date;
     }>;
     remove(id: string, req: any): Promise<{
-        id: string;
-        userId: string;
-        name: string;
         url: string;
+        name: string;
         expectedStatus: number;
         expectedText: string | null;
         intervalMinutes: number;
         isActive: boolean;
+        id: string;
+        userId: string;
+        githubRepoUrl: string | null;
+        githubWebhookId: string | null;
         createdAt: Date;
         updatedAt: Date;
     }>;
     getChecks(id: string, limit: string, req: any): Promise<{
-        id: string;
-        checkedAt: Date;
-        monitorId: string;
         status: string;
         statusCode: number | null;
         responseTimeMs: number | null;
         sslDaysLeft: number | null;
         errorMessage: string | null;
+        id: string;
+        checkedAt: Date;
+        monitorId: string;
     }[]>;
     getMetrics(id: string, req: any): Promise<{
         uptime: null;
@@ -95,13 +105,13 @@ export declare class MonitorsController {
         totalChecks: number;
     }>;
     runCheckNow(id: string, req: any): Promise<{
-        id: string;
-        checkedAt: Date;
-        monitorId: string;
         status: string;
         statusCode: number | null;
         responseTimeMs: number | null;
         sslDaysLeft: number | null;
         errorMessage: string | null;
+        id: string;
+        checkedAt: Date;
+        monitorId: string;
     }>;
 }

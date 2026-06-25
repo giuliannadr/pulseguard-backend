@@ -15,12 +15,33 @@ model Monitor {
   expectedText    String?  @map("expected_text")
   intervalMinutes Int      @default(5) @map("interval_minutes")
   isActive        Boolean  @default(true) @map("is_active")
+  githubRepoUrl   String?  @map("github_repo_url")
+  githubWebhookId String?  @map("github_webhook_id")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   checks Check[]
+  securityIncidents SecurityIncident[]
 
   @@map("monitors")
+}
+
+model SecurityIncident {
+  id              String   @id @default(uuid())
+  monitorId       String   @map("monitor_id")
+  commitHash      String   @map("commit_hash")
+  commitAuthor    String?  @map("commit_author")
+  riskType        String   @map("risk_type")
+  severity        String   
+  description     String
+  recommendation  String
+  resolved        Boolean  @default(false)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  monitor Monitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+
+  @@index([monitorId, createdAt(sort: Desc)])
+  @@map("security_incidents")
 }
 
 model Check {
