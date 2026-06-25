@@ -7,7 +7,7 @@ export declare class GithubService {
     private readonly WEBHOOK_URL;
     constructor(prisma: PrismaService, aiService: AiService);
     getUserRepos(token: string): Promise<any>;
-    autoConfigureWebhook(monitorId: string, owner: string, repo: string, token: string): Promise<{
+    autoConfigureWebhook(monitorId: string, owner: string, repo: string, token: string, userId: string): Promise<{
         success: boolean;
         webhookId: any;
         simulated?: undefined;

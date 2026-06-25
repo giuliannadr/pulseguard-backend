@@ -6,7 +6,7 @@ export declare class GithubController {
     connectWebhook(monitorId: string, body: {
         owner: string;
         repo: string;
-    }, githubToken: string): Promise<{
+    }, githubToken: string, req: any): Promise<{
         success: boolean;
         webhookId: any;
         simulated?: undefined;

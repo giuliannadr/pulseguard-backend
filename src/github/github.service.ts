@@ -10,9 +10,7 @@ export class GithubService {
   // Hardcode backend URL for demo purposes, normally in env
   // For Railway/local demo, you'd use a public URL or ngrok
   // Assuming frontend knows backend URL, let's just use a placeholder
-  private readonly WEBHOOK_URL = process.env.API_URL
-    ? `${process.env.API_URL}/github/webhook`
-    : 'https://pulseguard-backend.up.railway.app/github/webhook';
+  private readonly WEBHOOK_URL = `${process.env.API_URL ?? 'https://pulseguard-backend-production.up.railway.app/api'}/github/webhook`;
 
   constructor(
     private prisma: PrismaService,
@@ -52,9 +50,10 @@ export class GithubService {
     owner: string,
     repo: string,
     token: string,
+    userId: string,
   ) {
-    const monitor = await this.prisma.monitor.findUnique({
-      where: { id: monitorId },
+    const monitor = await this.prisma.monitor.findFirst({
+      where: { id: monitorId, userId },
     });
     if (!monitor) throw new NotFoundException('Monitor not found');
 

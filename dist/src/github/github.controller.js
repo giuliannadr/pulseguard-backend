@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GithubController = void 0;
 const common_1 = require("@nestjs/common");
 const github_service_1 = require("./github.service");
+const supabase_auth_guard_1 = require("../auth/supabase-auth.guard");
 let GithubController = class GithubController {
     githubService;
     constructor(githubService) {
@@ -22,20 +23,16 @@ let GithubController = class GithubController {
     }
     async getRepos(req) {
         const token = req.headers['x-github-token'];
-        console.log('--- GET REPOS CALLED ---');
-        console.log('Headers:', req.headers);
-        console.log('Token:', token ? token.substring(0, 10) + '...' : 'NONE');
         if (!token)
             throw new common_1.UnauthorizedException('Missing GitHub token');
         const repos = await this.githubService.getUserRepos(token);
-        console.log('Repos returned:', repos.length);
         return repos;
     }
-    async connectWebhook(monitorId, body, githubToken) {
+    async connectWebhook(monitorId, body, githubToken, req) {
         if (!githubToken) {
             throw new common_1.UnauthorizedException('Missing x-github-token header');
         }
-        return this.githubService.autoConfigureWebhook(monitorId, body.owner, body.repo, githubToken);
+        return this.githubService.autoConfigureWebhook(monitorId, body.owner, body.repo, githubToken, req.user.id);
     }
     async handleWebhook(event, payload) {
         if (event === 'push') {
@@ -46,6 +43,7 @@ let GithubController = class GithubController {
 };
 exports.GithubController = GithubController;
 __decorate([
+    (0, common_1.UseGuards)(supabase_auth_guard_1.SupabaseAuthGuard),
     (0, common_1.Get)('repos'),
     __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),
@@ -53,12 +51,14 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], GithubController.prototype, "getRepos", null);
 __decorate([
+    (0, common_1.UseGuards)(supabase_auth_guard_1.SupabaseAuthGuard),
     (0, common_1.Post)('connect/:monitorId'),
     __param(0, (0, common_1.Param)('monitorId')),
     __param(1, (0, common_1.Body)()),
     __param(2, (0, common_1.Headers)('x-github-token')),
+    __param(3, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object, String]),
+    __metadata("design:paramtypes", [String, Object, String, Object]),
     __metadata("design:returntype", Promise)
 ], GithubController.prototype, "connectWebhook", null);
 __decorate([

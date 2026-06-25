@@ -22,9 +22,7 @@ let GithubService = GithubService_1 = class GithubService {
     prisma;
     aiService;
     logger = new common_1.Logger(GithubService_1.name);
-    WEBHOOK_URL = process.env.API_URL
-        ? `${process.env.API_URL}/github/webhook`
-        : 'https://pulseguard-backend.up.railway.app/github/webhook';
+    WEBHOOK_URL = `${process.env.API_URL ?? 'https://pulseguard-backend-production.up.railway.app/api'}/github/webhook`;
     constructor(prisma, aiService) {
         this.prisma = prisma;
         this.aiService = aiService;
@@ -52,9 +50,9 @@ let GithubService = GithubService_1 = class GithubService {
             throw error;
         }
     }
-    async autoConfigureWebhook(monitorId, owner, repo, token) {
-        const monitor = await this.prisma.monitor.findUnique({
-            where: { id: monitorId },
+    async autoConfigureWebhook(monitorId, owner, repo, token, userId) {
+        const monitor = await this.prisma.monitor.findFirst({
+            where: { id: monitorId, userId },
         });
         if (!monitor)
             throw new common_1.NotFoundException('Monitor not found');
