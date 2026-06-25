@@ -47,6 +47,7 @@ export class AiService {
               },
               severity: {
                 type: SchemaType.STRING,
+                format: 'enum',
                 enum: ['Critical', 'High', 'Medium', 'Low', 'None'],
                 description: 'The urgency/severity of the issue',
               },

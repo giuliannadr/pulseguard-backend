@@ -93,4 +93,13 @@ export class MonitorsService {
       data: { monitorId: id, ...result },
     });
   }
+
+  async getSecurityIncidents(id: string, userId: string) {
+    await this.findOne(id, userId);
+    return this.prisma.securityIncident.findMany({
+      where: { monitorId: id },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+  }
 }

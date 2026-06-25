@@ -63,4 +63,9 @@ export class MonitorsController {
   runCheckNow(@Param('id') id: string, @Request() req: any) {
     return this.service.runCheckNow(id, req.user.id);
   }
+
+  @Get(':id/security-incidents')
+  getSecurityIncidents(@Param('id') id: string, @Request() req: any) {
+    return this.service.getSecurityIncidents(id, req.user.id);
+  }
 }
