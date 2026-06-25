@@ -26,6 +26,7 @@ __decorate([
 ], CreateMonitorDto.prototype, "name", void 0);
 __decorate([
     (0, class_validator_1.IsUrl)({ require_tld: false }),
+    (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], CreateMonitorDto.prototype, "url", void 0);
 __decorate([

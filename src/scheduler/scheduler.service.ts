@@ -14,8 +14,9 @@ export class SchedulerService {
 
   @Cron(CronExpression.EVERY_MINUTE)
   async runScheduledChecks() {
+    // Only schedule URL-based monitors (repo-only monitors have no URL to check)
     const monitors = await this.prisma.monitor.findMany({
-      where: { isActive: true },
+      where: { isActive: true, NOT: { url: null } },
     });
 
     const now = new Date();
@@ -40,10 +41,12 @@ export class SchedulerService {
 
   private async runCheck(monitor: {
     id: string;
-    url: string;
+    url: string | null;
     expectedStatus: number;
     expectedText: string | null;
   }) {
+    if (!monitor.url) return;
+
     const result = await this.checker.checkUrl(
       monitor.url,
       monitor.expectedStatus,

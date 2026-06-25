@@ -16,7 +16,7 @@ export declare class MonitorsController {
             checkedAt: Date;
         }[];
     } & {
-        url: string;
+        url: string | null;
         name: string;
         expectedStatus: number;
         expectedText: string | null;
@@ -30,7 +30,7 @@ export declare class MonitorsController {
         updatedAt: Date;
     })[]>;
     findOne(id: string, req: any): Promise<{
-        url: string;
+        url: string | null;
         name: string;
         expectedStatus: number;
         expectedText: string | null;
@@ -44,7 +44,7 @@ export declare class MonitorsController {
         updatedAt: Date;
     }>;
     create(dto: CreateMonitorDto, req: any): import("@prisma/client").Prisma.Prisma__MonitorClient<{
-        url: string;
+        url: string | null;
         name: string;
         expectedStatus: number;
         expectedText: string | null;
@@ -60,7 +60,7 @@ export declare class MonitorsController {
         adapter: import("@prisma/adapter-pg").PrismaPg;
     }>;
     update(id: string, dto: UpdateMonitorDto, req: any): Promise<{
-        url: string;
+        url: string | null;
         name: string;
         expectedStatus: number;
         expectedText: string | null;
@@ -74,7 +74,7 @@ export declare class MonitorsController {
         updatedAt: Date;
     }>;
     remove(id: string, req: any): Promise<{
-        url: string;
+        url: string | null;
         name: string;
         expectedStatus: number;
         expectedText: string | null;

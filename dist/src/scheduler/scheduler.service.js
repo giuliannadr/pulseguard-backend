@@ -25,7 +25,7 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
     }
     async runScheduledChecks() {
         const monitors = await this.prisma.monitor.findMany({
-            where: { isActive: true },
+            where: { isActive: true, NOT: { url: null } },
         });
         const now = new Date();
         for (const monitor of monitors) {
@@ -42,6 +42,8 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
         }
     }
     async runCheck(monitor) {
+        if (!monitor.url)
+            return;
         const result = await this.checker.checkUrl(monitor.url, monitor.expectedStatus, monitor.expectedText);
         await this.prisma.check.create({
             data: { monitorId: monitor.id, ...result },

@@ -48,7 +48,7 @@ let MonitorsService = class MonitorsService {
             data: {
                 userId,
                 name: dto.name,
-                url: dto.url,
+                url: dto.url ?? null,
                 expectedStatus: dto.expectedStatus ?? 200,
                 expectedText: dto.expectedText,
                 intervalMinutes: dto.intervalMinutes ?? 5,
@@ -94,6 +94,9 @@ let MonitorsService = class MonitorsService {
     }
     async runCheckNow(id, userId) {
         const monitor = await this.findOne(id, userId);
+        if (!monitor.url) {
+            throw new Error('This monitor has no URL configured for health checks.');
+        }
         const result = await this.checker.checkUrl(monitor.url, monitor.expectedStatus, monitor.expectedText);
         return this.prisma.check.create({
             data: { monitorId: id, ...result },

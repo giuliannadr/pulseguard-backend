@@ -14,7 +14,8 @@ export class CreateMonitorDto {
   name: string;
 
   @IsUrl({ require_tld: false })
-  url: string;
+  @IsOptional()
+  url?: string;
 
   @IsInt()
   @Min(100)

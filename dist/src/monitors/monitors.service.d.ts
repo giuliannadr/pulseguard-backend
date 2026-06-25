@@ -20,7 +20,7 @@ export declare class MonitorsService {
             checkedAt: Date;
         }[];
     } & {
-        url: string;
+        url: string | null;
         name: string;
         expectedStatus: number;
         expectedText: string | null;
@@ -34,7 +34,7 @@ export declare class MonitorsService {
         updatedAt: Date;
     })[]>;
     findOne(id: string, userId: string): Promise<{
-        url: string;
+        url: string | null;
         name: string;
         expectedStatus: number;
         expectedText: string | null;
@@ -48,7 +48,7 @@ export declare class MonitorsService {
         updatedAt: Date;
     }>;
     create(userId: string, dto: CreateMonitorDto): import("@prisma/client").Prisma.Prisma__MonitorClient<{
-        url: string;
+        url: string | null;
         name: string;
         expectedStatus: number;
         expectedText: string | null;
@@ -64,7 +64,7 @@ export declare class MonitorsService {
         adapter: import("@prisma/adapter-pg").PrismaPg;
     }>;
     update(id: string, userId: string, dto: UpdateMonitorDto): Promise<{
-        url: string;
+        url: string | null;
         name: string;
         expectedStatus: number;
         expectedText: string | null;
@@ -78,7 +78,7 @@ export declare class MonitorsService {
         updatedAt: Date;
     }>;
     remove(id: string, userId: string): Promise<{
-        url: string;
+        url: string | null;
         name: string;
         expectedStatus: number;
         expectedText: string | null;
