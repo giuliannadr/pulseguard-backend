@@ -399,8 +399,13 @@ let PlaygroundService = PlaygroundService_1 = class PlaygroundService {
         Simulation Response Results: ${JSON.stringify(results)}
 
         Determine whether the target endpoint is vulnerable to this attack vector.
-        - If the server blocked it with 403 Forbidden, 401 Unauthorized, 400 Bad Request, or 429 Too Many Requests (for rate limits), mark isVulnerable as 'No' or 'Suspected' depending on header information.
-        - If the server responded with 200 OK or 500 Internal Server Error (and shows raw stack traces or database structures), mark isVulnerable as 'Yes'.
+        Guidelines:
+        1. If the server blocked the request (e.g., 403 Forbidden, 401 Unauthorized, 400 Bad Request, 429 Too Many Requests), mark isVulnerable as 'No'.
+        2. If the server responded with 200 OK:
+           - For SQLi/XSS: Check if the response is just a static health check, status page, or landing page that ignores parameters. If the page is static and does not reflect raw inputs or show database errors, it is NOT vulnerable. Mark isVulnerable as 'No'. Only flag 'Yes' if there is evidence of SQL execution results or raw input reflection (XSS) in the body.
+           - For Sensitive Paths (e.g., /.env): If the server returns 200 OK but the body does not contain environment variables (like DB_PASSWORD, API_KEY, etc.) or just returns a generic SPA index.html, it is NOT vulnerable. Mark isVulnerable as 'No'.
+        3. If the server responded with 500 Internal Server Error:
+           - If it contains raw database error stack traces or Prisma/SQL syntax errors, mark isVulnerable as 'Yes'.
         `;
                 const result = await model.generateContent(prompt);
                 aiAnalysis = JSON.parse(result.response.text());
