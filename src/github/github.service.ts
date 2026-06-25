@@ -29,9 +29,9 @@ export class GithubService {
 
       // 2. Fetch the user's public repositories using the /users endpoint
       // This bypasses the need for 'public_repo' scope on the token
+      // WE MUST NOT SEND THE TOKEN HERE, otherwise GitHub restricts the response!
       const { data } = await axios.get(`https://api.github.com/users/${username}/repos?sort=updated&per_page=100`, {
         headers: { 
-          Authorization: `Bearer ${token}`,
           Accept: 'application/vnd.github.v3+json',
         },
       });
