@@ -40,23 +40,23 @@ let AiService = AiService_1 = class AiService {
                 generationConfig: {
                     responseMimeType: 'application/json',
                     responseSchema: {
-                        type: generative_ai_1.Type.OBJECT,
+                        type: generative_ai_1.SchemaType.OBJECT,
                         properties: {
                             riskType: {
-                                type: generative_ai_1.Type.STRING,
+                                type: generative_ai_1.SchemaType.STRING,
                                 description: 'The type of security or operational risk (e.g., SQL Injection, Exposed Secret, Logic Bug, Null Pointer, None)',
                             },
                             severity: {
-                                type: generative_ai_1.Type.STRING,
+                                type: generative_ai_1.SchemaType.STRING,
                                 enum: ['Critical', 'High', 'Medium', 'Low', 'None'],
                                 description: 'The urgency/severity of the issue',
                             },
                             description: {
-                                type: generative_ai_1.Type.STRING,
+                                type: generative_ai_1.SchemaType.STRING,
                                 description: 'A brief explanation of why this code change is risky or what it breaks',
                             },
                             recommendation: {
-                                type: generative_ai_1.Type.STRING,
+                                type: generative_ai_1.SchemaType.STRING,
                                 description: 'A code snippet or actionable advice on how to fix the issue',
                             },
                         },

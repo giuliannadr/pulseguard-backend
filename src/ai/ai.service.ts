@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { GoogleGenerativeAI, Schema, Type } from '@google/generative-ai';
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 
 export interface SecurityAnalysis {
   riskType: string;
@@ -39,23 +39,23 @@ export class AiService {
         generationConfig: {
           responseMimeType: 'application/json',
           responseSchema: {
-            type: Type.OBJECT,
+            type: SchemaType.OBJECT,
             properties: {
               riskType: {
-                type: Type.STRING,
+                type: SchemaType.STRING,
                 description: 'The type of security or operational risk (e.g., SQL Injection, Exposed Secret, Logic Bug, Null Pointer, None)',
               },
               severity: {
-                type: Type.STRING,
+                type: SchemaType.STRING,
                 enum: ['Critical', 'High', 'Medium', 'Low', 'None'],
                 description: 'The urgency/severity of the issue',
               },
               description: {
-                type: Type.STRING,
+                type: SchemaType.STRING,
                 description: 'A brief explanation of why this code change is risky or what it breaks',
               },
               recommendation: {
-                type: Type.STRING,
+                type: SchemaType.STRING,
                 description: 'A code snippet or actionable advice on how to fix the issue',
               },
             },
