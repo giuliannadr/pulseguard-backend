@@ -53,6 +53,7 @@ const axios_1 = __importDefault(require("axios"));
 const dns = __importStar(require("dns"));
 const tls = __importStar(require("tls"));
 const generative_ai_1 = require("@google/generative-ai");
+const ssrf_guard_1 = require("../common/ssrf-guard");
 let PlaygroundService = PlaygroundService_1 = class PlaygroundService {
     aiService;
     logger = new common_1.Logger(PlaygroundService_1.name);
@@ -65,6 +66,7 @@ let PlaygroundService = PlaygroundService_1 = class PlaygroundService {
         }
     }
     async auditEndpoint(url, method, headers, body) {
+        await (0, ssrf_guard_1.assertSafeUrl)(url);
         const startTime = Date.now();
         let status = 0;
         let responseHeaders = {};
@@ -200,6 +202,7 @@ let PlaygroundService = PlaygroundService_1 = class PlaygroundService {
     }
     async inspectDomain(domain) {
         const cleanDomain = domain.replace(/https?:\/\//, '').split('/')[0].split(':')[0];
+        await (0, ssrf_guard_1.assertSafeUrl)(`https://${cleanDomain}`);
         const dnsInfo = {};
         const resolveTxt = (name) => {
             return new Promise((res) => {
@@ -315,6 +318,7 @@ let PlaygroundService = PlaygroundService_1 = class PlaygroundService {
         };
     }
     async simulateAttack(url, attackType) {
+        await (0, ssrf_guard_1.assertSafeUrl)(url);
         let payload = '';
         let description = '';
         const headers = {

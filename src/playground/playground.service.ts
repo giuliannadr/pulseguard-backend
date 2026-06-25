@@ -4,6 +4,7 @@ import axios from 'axios';
 import * as dns from 'dns';
 import * as tls from 'tls';
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import { assertSafeUrl } from '../common/ssrf-guard';
 
 @Injectable()
 export class PlaygroundService {
@@ -18,6 +19,7 @@ export class PlaygroundService {
   }
 
   async auditEndpoint(url: string, method: string, headers: Record<string, string>, body: any) {
+    await assertSafeUrl(url);
     const startTime = Date.now();
     let status = 0;
     let responseHeaders: Record<string, string> = {};
@@ -162,6 +164,7 @@ export class PlaygroundService {
 
   async inspectDomain(domain: string) {
     const cleanDomain = domain.replace(/https?:\/\//, '').split('/')[0].split(':')[0];
+    await assertSafeUrl(`https://${cleanDomain}`);
 
     // Query DNS SPF & DMARC records
     const dnsInfo: any = {};
@@ -286,6 +289,7 @@ export class PlaygroundService {
   }
 
   async simulateAttack(url: string, attackType: string) {
+    await assertSafeUrl(url);
     let payload = '';
     let description = '';
     const headers: Record<string, string> = {
