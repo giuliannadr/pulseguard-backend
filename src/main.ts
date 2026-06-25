@@ -14,8 +14,19 @@ process.on('uncaughtException', (error) => {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? 'http://localhost:3000')
+    .split(',')
+    .map(o => o.trim());
+
   app.enableCors({
-    origin: '*',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (curl, Postman, server-to-server)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS: origin ${origin} not allowed`));
+      }
+    },
     allowedHeaders: ['Content-Type', 'Authorization', 'x-github-token', 'x-github-event'],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     preflightContinue: false,

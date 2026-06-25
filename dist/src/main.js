@@ -13,8 +13,18 @@ process.on('uncaughtException', (error) => {
 });
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? 'http://localhost:3000')
+        .split(',')
+        .map(o => o.trim());
     app.enableCors({
-        origin: '*',
+        origin: (origin, callback) => {
+            if (!origin || allowedOrigins.includes(origin)) {
+                callback(null, true);
+            }
+            else {
+                callback(new Error(`CORS: origin ${origin} not allowed`));
+            }
+        },
         allowedHeaders: ['Content-Type', 'Authorization', 'x-github-token', 'x-github-event'],
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         preflightContinue: false,
