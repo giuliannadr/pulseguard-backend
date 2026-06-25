@@ -14,7 +14,7 @@ async function bootstrap() {
         optionsSuccessStatus: 204,
     });
     app.useGlobalPipes(new common_1.ValidationPipe({ whitelist: true, transform: true }));
-    app.setGlobalPrefix('api');
+    app.setGlobalPrefix('api', { exclude: ['health'] });
     await app.listen(process.env.PORT ?? 3001);
 }
 bootstrap();
