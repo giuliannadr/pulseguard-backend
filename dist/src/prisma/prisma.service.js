@@ -19,6 +19,7 @@ const client = createPrismaClient();
 let PrismaService = class PrismaService {
     monitor = client.monitor;
     check = client.check;
+    securityIncident = client.securityIncident;
     async onModuleInit() {
         await client.$connect();
     }

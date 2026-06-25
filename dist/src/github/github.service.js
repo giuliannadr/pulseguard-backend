@@ -31,14 +31,23 @@ let GithubService = GithubService_1 = class GithubService {
     }
     async getUserRepos(token) {
         try {
-            const { data } = await axios_1.default.get('https://api.github.com/user/repos?sort=updated&per_page=20', {
+            const userRes = await axios_1.default.get('https://api.github.com/user', {
                 headers: { Authorization: `Bearer ${token}` },
+            });
+            const username = userRes.data.login;
+            const { data } = await axios_1.default.get(`https://api.github.com/users/${username}/repos?sort=updated&per_page=100`, {
+                headers: {
+                    Accept: 'application/vnd.github.v3+json',
+                },
             });
             return data.map((repo) => ({
                 id: repo.id,
                 name: repo.name,
                 full_name: repo.full_name,
                 html_url: repo.html_url,
+                private: repo.private,
+                updated_at: repo.updated_at,
+                owner: { login: repo.owner.login }
             }));
         }
         catch (error) {

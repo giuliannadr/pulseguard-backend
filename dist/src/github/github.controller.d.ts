@@ -2,7 +2,7 @@ import { GithubService } from './github.service';
 export declare class GithubController {
     private readonly githubService;
     constructor(githubService: GithubService);
-    listRepos(githubToken: string): Promise<any>;
+    getRepos(req: any): Promise<any>;
     connectWebhook(monitorId: string, body: {
         owner: string;
         repo: string;

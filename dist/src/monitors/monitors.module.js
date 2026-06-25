@@ -23,7 +23,4 @@ exports.MonitorsModule = MonitorsModule = __decorate([
         exports: [monitors_service_1.MonitorsService],
     })
 ], MonitorsModule);
-class MonitorsModule {
-}
-exports.MonitorsModule = MonitorsModule;
 //# sourceMappingURL=monitors.module.js.map

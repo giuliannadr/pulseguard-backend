@@ -14,6 +14,7 @@ const client = createPrismaClient();
 export class PrismaService implements OnModuleInit, OnModuleDestroy {
   readonly monitor = client.monitor;
   readonly check = client.check;
+  readonly securityIncident = client.securityIncident;
 
   async onModuleInit() {
     await (client as any).$connect();

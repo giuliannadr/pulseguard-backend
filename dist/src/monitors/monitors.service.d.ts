@@ -116,5 +116,16 @@ export declare class MonitorsService {
         checkedAt: Date;
         monitorId: string;
     }>;
-    getSecurityIncidents(id: string, userId: string): Promise<any>;
+    getSecurityIncidents(id: string, userId: string): Promise<{
+        id: string;
+        createdAt: Date;
+        monitorId: string;
+        commitHash: string;
+        commitAuthor: string | null;
+        riskType: string;
+        severity: string;
+        description: string;
+        recommendation: string;
+        resolved: boolean;
+    }[]>;
 }

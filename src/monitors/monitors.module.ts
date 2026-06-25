@@ -11,4 +11,3 @@ import { CheckerModule } from '../checker/checker.module';
   exports: [MonitorsService],
 })
 export class MonitorsModule {}
-export class MonitorsModule {}
