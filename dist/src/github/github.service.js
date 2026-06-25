@@ -31,12 +31,9 @@ let GithubService = GithubService_1 = class GithubService {
     }
     async getUserRepos(token) {
         try {
-            const userRes = await axios_1.default.get('https://api.github.com/user', {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            const username = userRes.data.login;
-            const { data } = await axios_1.default.get(`https://api.github.com/users/${username}/repos?sort=updated&per_page=100`, {
+            const { data } = await axios_1.default.get('https://api.github.com/user/repos?sort=updated&per_page=100&affiliation=owner,collaborator', {
                 headers: {
+                    Authorization: `Bearer ${token}`,
                     Accept: 'application/vnd.github.v3+json',
                 },
             });
@@ -51,7 +48,7 @@ let GithubService = GithubService_1 = class GithubService {
             }));
         }
         catch (error) {
-            this.logger.error('Failed to fetch github repos', error);
+            this.logger.error('Failed to fetch github repos', error.response?.data || error.message);
             throw error;
         }
     }

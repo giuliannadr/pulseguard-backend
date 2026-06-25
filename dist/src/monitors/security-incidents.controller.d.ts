@@ -4,8 +4,8 @@ export declare class SecurityIncidentsController {
     constructor(prisma: PrismaService);
     findAll(req: any): Promise<({
         monitor: {
-            name: string;
             url: string;
+            name: string;
         };
     } & {
         id: string;

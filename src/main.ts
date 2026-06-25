@@ -8,7 +8,10 @@ async function bootstrap() {
 
   app.enableCors({
     origin: '*',
-    allowedHeaders: '*',
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-github-token', 'x-github-event'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
