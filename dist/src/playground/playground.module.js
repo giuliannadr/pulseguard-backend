@@ -6,21 +6,19 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GithubModule = void 0;
+exports.PlaygroundModule = void 0;
 const common_1 = require("@nestjs/common");
-const github_controller_1 = require("./github.controller");
-const github_service_1 = require("./github.service");
-const prisma_module_1 = require("../prisma/prisma.module");
+const playground_controller_1 = require("./playground.controller");
+const playground_service_1 = require("./playground.service");
 const ai_module_1 = require("../ai/ai.module");
-let GithubModule = class GithubModule {
+let PlaygroundModule = class PlaygroundModule {
 };
-exports.GithubModule = GithubModule;
-exports.GithubModule = GithubModule = __decorate([
+exports.PlaygroundModule = PlaygroundModule;
+exports.PlaygroundModule = PlaygroundModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule, ai_module_1.AiModule],
-        controllers: [github_controller_1.GithubController],
-        providers: [github_service_1.GithubService],
-        exports: [github_service_1.GithubService],
+        imports: [ai_module_1.AiModule],
+        controllers: [playground_controller_1.PlaygroundController],
+        providers: [playground_service_1.PlaygroundService],
     })
-], GithubModule);
-//# sourceMappingURL=github.module.js.map
+], PlaygroundModule);
+//# sourceMappingURL=playground.module.js.map

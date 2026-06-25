@@ -1,98 +1,113 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# PulseGuard — Backend (NestJS + Prisma + PostgreSQL)
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+PulseGuard es una plataforma DevSecOps y de monitoreo de disponibilidad en tiempo real. Este repositorio contiene el código del backend, una API REST construida sobre **NestJS** que integra **Prisma ORM**, **Supabase PostgreSQL** y **Gemini 2.5 Flash** para auditoría y simulaciones de seguridad automáticas.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 🛠 Arquitectura del Software (Clean Architecture Rules)
 
-## Description
+El backend de PulseGuard se ha diseñado siguiendo los principios de la **Arquitectura Limpia (Clean Architecture)** y separación de responsabilidades en capas para garantizar la testabilidad, escalabilidad y facilidad de mantenimiento:
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
-
-```bash
-$ npm install
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 1. Frameworks & Drivers (Prisma, PostgreSQL, Gemini API)    │
+│    └─ Outer infrastructure detail                           │
+├─────────────────────────────────────────────────────────────┤
+│ 2. Interface Adapters (NestJS Controllers, DTOs, Guards)   │
+│    └─ Receives HTTP transport & parses payloads             │
+├─────────────────────────────────────────────────────────────┤
+│ 3. Use Cases / Services (MonitorsService, PlaygroundService)│
+│    └─ Core business logic rules & orchestrators             │
+├─────────────────────────────────────────────────────────────┤
+│ 4. Entities / Domain (Database Schema models)               │
+│    └─ Core database entities independent of framework       │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## Compile and run the project
+1. **Capa de Entidades (Domain Entities):** Definidas en `prisma/schema.prisma`. Contiene los modelos base independientes de la lógica de negocio: `Monitor`, `Check` y `SecurityIncident`.
+2. **Capa de Casos de Uso (Services):** Contienen las reglas esenciales de negocio (ej. `MonitorsService`, `GithubService`, `PlaygroundService`). No tienen dependencias con el protocolo de transporte (HTTP) ni cabeceras express.
+3. **Capa de Adaptadores de Interfaz (Controllers & Guards):** En `src/**/*.controller.ts`. Son responsables de recibir las peticiones REST, validar DTOs, aplicar el middleware de autenticación (`SupabaseAuthGuard`) y retornar los payloads en formato JSON.
+4. **Capa de Frameworks (Drivers):** Herramientas externas que se inyectan en la aplicación (Base de datos PostgreSQL en Supabase, Axios para solicitudes HTTP, Google Generative AI SDK para el escaneo de código).
 
-```bash
-# development
-$ npm run start
+---
 
-# watch mode
-$ npm run start:dev
+## 🚀 Tecnologías Principales
 
-# production mode
-$ npm run start:prod
+- **NestJS:** Framework progresivo de Node.js para construir servicios desacoplados.
+- **Prisma ORM:** Modelado de tipos seguro y consultas SQL estructuradas.
+- **Supabase (PostgreSQL):** Base de datos persistente con soporte para suscripciones en tiempo real.
+- **Gemini 2.5 Flash:** Modelo de lenguaje generativo utilizado para auditoría de código estático (SAST), auditoría de cabeceras seguras de API y análisis del simulador de ataques.
+- **Axios:** Cliente HTTP para pruebas de endpoints y descargas de diffs desde GitHub API.
+
+---
+
+## 🤖 Orquestación de IA y Decisiones de Ingeniería
+
+El desarrollo de PulseGuard se ha realizado asistido por **modelos de lenguaje avanzados (Gemini 3.5 / Claude)**. 
+- **Criterio de QA Humano-en-el-Bucle (Human-in-the-Loop):** Se auditaron todas las salidas generadas, adaptando los tipos estrictos de TypeScript y reparando las APIs de streaming JSON.
+- **Ingeniería de Prompts para Seguridad:** Se desarrollaron prompts estructurados con validación de esquemas estricta (`SchemaType.OBJECT`) para asegurar que Gemini responda en formato JSON predecible, mitigando alucinaciones y asegurando códigos de estado estables.
+
+---
+
+## 🧪 Simulador de Ataques Integrado (Playground)
+
+El backend expone endpoints interactivos bajo la ruta `/playground` que permiten realizar auditorías seguras en tiempo real:
+- **API Auditor:** Realiza peticiones asíncronas y audita con Gemini la seguridad de los headers (CORS, HSTS, XSS protection, cookies seguras).
+- **Code Auditor (SAST):** Analiza dependencias y código en busca de malas prácticas o claves secretas inyectadas.
+- **Hacking Simulator:** Ejecuta probes inofensivos (`SQL Injection` con lógica OR, `Reflected XSS`, ráfagas rápidas para evaluar `Rate Limiting` y `Sensitive Path Traversal` como buscar `/.env`) para diagnosticar la resiliencia del servidor.
+
+---
+
+## 📦 Instalación y Configuración Local
+
+### Prerrequisitos
+- Node.js v20.x o v22.x
+- Cuenta de Supabase (Base de datos PostgreSQL)
+- Clave de API de Gemini (`GEMINI_API_KEY`)
+
+### Variables de Entorno (`.env`)
+Crea un archivo `.env` en la raíz de `pulseguard-backend/`:
+```env
+PORT=3001
+API_URL=http://localhost:3001/api
+
+# Database connection
+DATABASE_URL="postgresql://postgres:password@aws-db.pooler.supabase.com:5432/postgres?pgbouncer=true"
+DIRECT_URL="postgresql://postgres:password@aws-db.pooler.supabase.com:5432/postgres"
+
+# Supabase Auth
+SUPABASE_URL="https://rswebvxvtppfopegedfb.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOi..."
+
+# Google Gemini AI Key
+GEMINI_API_KEY="AIzaSy..."
 ```
 
-## Run tests
+### Ejecutar Localmente
+1. Instalar dependencias:
+   ```bash
+   npm install
+   ```
+2. Generar el cliente Prisma:
+   ```bash
+   npx prisma generate
+   ```
+3. Sincronizar esquema de base de datos:
+   ```bash
+   npx prisma db push
+   ```
+4. Levantar servidor de desarrollo:
+   ```bash
+   npm run start:dev
+   ```
 
+---
+
+## 🛡 Verificación y Tests
+
+Para ejecutar las suites de prueba unitarias:
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm run test
 ```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+Para verificar la compilación estricta de TypeScript antes de producción:
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run build
 ```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).

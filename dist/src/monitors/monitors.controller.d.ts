@@ -12,8 +12,8 @@ export declare class MonitorsController {
             sslDaysLeft: number | null;
             errorMessage: string | null;
             id: string;
-            checkedAt: Date;
             monitorId: string;
+            checkedAt: Date;
         }[];
     } & {
         url: string;
@@ -94,8 +94,8 @@ export declare class MonitorsController {
         sslDaysLeft: number | null;
         errorMessage: string | null;
         id: string;
-        checkedAt: Date;
         monitorId: string;
+        checkedAt: Date;
     }[]>;
     getMetrics(id: string, req: any): Promise<{
         uptime: null;
@@ -113,19 +113,23 @@ export declare class MonitorsController {
         sslDaysLeft: number | null;
         errorMessage: string | null;
         id: string;
-        checkedAt: Date;
         monitorId: string;
+        checkedAt: Date;
     }>;
     getSecurityIncidents(id: string, req: any): Promise<{
+        riskType: string;
+        severity: string;
+        description: string;
+        recommendation: string;
         id: string;
         createdAt: Date;
         monitorId: string;
         commitHash: string;
         commitAuthor: string | null;
-        riskType: string;
-        severity: string;
-        description: string;
-        recommendation: string;
         resolved: boolean;
     }[]>;
+    scanRepo(id: string, req: any, githubToken: string): Promise<{
+        success: boolean;
+        count: number;
+    }>;
 }

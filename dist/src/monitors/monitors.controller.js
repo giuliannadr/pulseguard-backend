@@ -50,6 +50,9 @@ let MonitorsController = class MonitorsController {
     getSecurityIncidents(id, req) {
         return this.service.getSecurityIncidents(id, req.user.id);
     }
+    scanRepo(id, req, githubToken) {
+        return this.service.scanRepo(id, req.user.id, githubToken);
+    }
 };
 exports.MonitorsController = MonitorsController;
 __decorate([
@@ -125,6 +128,15 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], MonitorsController.prototype, "getSecurityIncidents", null);
+__decorate([
+    (0, common_1.Post)(':id/scan-repo'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __param(2, (0, common_1.Headers)('x-github-token')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, String]),
+    __metadata("design:returntype", void 0)
+], MonitorsController.prototype, "scanRepo", null);
 exports.MonitorsController = MonitorsController = __decorate([
     (0, common_1.UseGuards)(supabase_auth_guard_1.SupabaseAuthGuard),
     (0, common_1.Controller)('monitors'),

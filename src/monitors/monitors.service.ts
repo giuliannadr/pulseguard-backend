@@ -3,12 +3,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CheckerService } from '../checker/checker.service';
 import { CreateMonitorDto } from './dto/create-monitor.dto';
 import { UpdateMonitorDto } from './dto/update-monitor.dto';
+import { GithubService } from '../github/github.service';
 
 @Injectable()
 export class MonitorsService {
   constructor(
     private prisma: PrismaService,
     private checker: CheckerService,
+    private githubService: GithubService,
   ) {}
 
   findAll(userId: string) {
@@ -111,5 +113,26 @@ export class MonitorsService {
       orderBy: { createdAt: 'desc' },
       take: 50,
     });
+  }
+
+  async scanRepo(id: string, userId: string, githubToken: string) {
+    const monitor = await this.findOne(id, userId);
+    if (!monitor.githubRepoUrl) {
+      throw new Error('This project is not connected to a GitHub repository.');
+    }
+    if (!githubToken) {
+      throw new Error('GitHub token is required to scan repository.');
+    }
+
+    const cleanUrl = monitor.githubRepoUrl.replace('.git', '');
+    const parts = cleanUrl.split('/');
+    const repoName = parts.pop();
+    const owner = parts.pop();
+
+    if (!owner || !repoName) {
+      throw new Error('Invalid GitHub repository URL.');
+    }
+
+    return this.githubService.scanRepoCommits(id, owner, repoName, githubToken);
   }
 }

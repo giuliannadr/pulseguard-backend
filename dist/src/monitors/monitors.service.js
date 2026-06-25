@@ -13,12 +13,15 @@ exports.MonitorsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const checker_service_1 = require("../checker/checker.service");
+const github_service_1 = require("../github/github.service");
 let MonitorsService = class MonitorsService {
     prisma;
     checker;
-    constructor(prisma, checker) {
+    githubService;
+    constructor(prisma, checker, githubService) {
         this.prisma = prisma;
         this.checker = checker;
+        this.githubService = githubService;
     }
     findAll(userId) {
         return this.prisma.monitor.findMany({
@@ -104,11 +107,29 @@ let MonitorsService = class MonitorsService {
             take: 50,
         });
     }
+    async scanRepo(id, userId, githubToken) {
+        const monitor = await this.findOne(id, userId);
+        if (!monitor.githubRepoUrl) {
+            throw new Error('This project is not connected to a GitHub repository.');
+        }
+        if (!githubToken) {
+            throw new Error('GitHub token is required to scan repository.');
+        }
+        const cleanUrl = monitor.githubRepoUrl.replace('.git', '');
+        const parts = cleanUrl.split('/');
+        const repoName = parts.pop();
+        const owner = parts.pop();
+        if (!owner || !repoName) {
+            throw new Error('Invalid GitHub repository URL.');
+        }
+        return this.githubService.scanRepoCommits(id, owner, repoName, githubToken);
+    }
 };
 exports.MonitorsService = MonitorsService;
 exports.MonitorsService = MonitorsService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        checker_service_1.CheckerService])
+        checker_service_1.CheckerService,
+        github_service_1.GithubService])
 ], MonitorsService);
 //# sourceMappingURL=monitors.service.js.map

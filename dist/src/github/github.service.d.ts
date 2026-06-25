@@ -16,5 +16,9 @@ export declare class GithubService {
         simulated: boolean;
         webhookId?: undefined;
     }>;
+    scanRepoCommits(monitorId: string, owner: string, repo: string, githubToken: string): Promise<{
+        success: boolean;
+        count: number;
+    }>;
     handlePushEvent(payload: any): Promise<void>;
 }

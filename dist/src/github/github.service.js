@@ -92,6 +92,59 @@ let GithubService = GithubService_1 = class GithubService {
             return { success: true, simulated: true };
         }
     }
+    async scanRepoCommits(monitorId, owner, repo, githubToken) {
+        try {
+            this.logger.log(`Scanning commits for ${owner}/${repo} on monitor ${monitorId}...`);
+            const { data: commits } = await axios_1.default.get(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=5`, {
+                headers: {
+                    Authorization: `Bearer ${githubToken}`,
+                    Accept: 'application/vnd.github.v3+json',
+                },
+            });
+            const savedIncidents = [];
+            for (const item of commits) {
+                const commitHash = item.sha;
+                const commitAuthor = `${item.commit.author.name} <${item.commit.author.email}>`;
+                const existing = await this.prisma.securityIncident.findFirst({
+                    where: { monitorId, commitHash },
+                });
+                if (existing) {
+                    continue;
+                }
+                let diffText = 'Modified files in repository';
+                try {
+                    const diffResponse = await axios_1.default.get(`https://api.github.com/repos/${owner}/${repo}/commits/${commitHash}`, {
+                        headers: {
+                            Authorization: `Bearer ${githubToken}`,
+                            Accept: 'application/vnd.github.v3.diff',
+                        },
+                    });
+                    diffText = diffResponse.data;
+                }
+                catch (e) {
+                    this.logger.warn(`Failed to fetch diff for commit ${commitHash}: ${e.message}`);
+                }
+                const analysis = await this.aiService.analyzeCommit(diffText);
+                const incident = await this.prisma.securityIncident.create({
+                    data: {
+                        monitorId,
+                        commitHash,
+                        commitAuthor,
+                        riskType: analysis.riskType,
+                        severity: analysis.severity,
+                        description: analysis.description,
+                        recommendation: analysis.recommendation,
+                    },
+                });
+                savedIncidents.push(incident);
+            }
+            return { success: true, count: savedIncidents.length };
+        }
+        catch (error) {
+            this.logger.error(`Failed to scan commits for ${owner}/${repo}`, error.response?.data || error.message);
+            throw error;
+        }
+    }
     async handlePushEvent(payload) {
         const repoUrl = payload.repository?.html_url;
         if (!repoUrl)

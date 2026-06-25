@@ -8,6 +8,7 @@ import { CheckerModule } from './checker/checker.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { GithubModule } from './github/github.module';
 import { AiModule } from './ai/ai.module';
+import { PlaygroundModule } from './playground/playground.module';
 
 @Module({
   controllers: [HealthController],
@@ -20,6 +21,7 @@ import { AiModule } from './ai/ai.module';
     SchedulerModule,
     GithubModule,
     AiModule,
+    PlaygroundModule,
   ],
 })
 export class AppModule {}

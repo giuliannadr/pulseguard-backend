@@ -8,27 +8,27 @@ export declare class SecurityIncidentsController {
             name: string;
         };
     } & {
+        riskType: string;
+        severity: string;
+        description: string;
+        recommendation: string;
         id: string;
         createdAt: Date;
         monitorId: string;
         commitHash: string;
         commitAuthor: string | null;
-        riskType: string;
-        severity: string;
-        description: string;
-        recommendation: string;
         resolved: boolean;
     })[]>;
     resolve(id: string, req: any): Promise<{
+        riskType: string;
+        severity: string;
+        description: string;
+        recommendation: string;
         id: string;
         createdAt: Date;
         monitorId: string;
         commitHash: string;
         commitAuthor: string | null;
-        riskType: string;
-        severity: string;
-        description: string;
-        recommendation: string;
         resolved: boolean;
     }>;
 }

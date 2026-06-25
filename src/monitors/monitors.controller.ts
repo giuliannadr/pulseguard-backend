@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
@@ -75,5 +76,14 @@ export class MonitorsController {
   @Get(':id/security-incidents')
   getSecurityIncidents(@Param('id') id: string, @Request() req: any) {
     return this.service.getSecurityIncidents(id, req.user.id);
+  }
+
+  @Post(':id/scan-repo')
+  scanRepo(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Headers('x-github-token') githubToken: string,
+  ) {
+    return this.service.scanRepo(id, req.user.id, githubToken);
   }
 }

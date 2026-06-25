@@ -104,6 +104,85 @@ export class GithubService {
     }
   }
 
+  async scanRepoCommits(
+    monitorId: string,
+    owner: string,
+    repo: string,
+    githubToken: string,
+  ) {
+    try {
+      this.logger.log(`Scanning commits for ${owner}/${repo} on monitor ${monitorId}...`);
+      // Fetch latest 5 commits
+      const { data: commits } = await axios.get(
+        `https://api.github.com/repos/${owner}/${repo}/commits?per_page=5`,
+        {
+          headers: {
+            Authorization: `Bearer ${githubToken}`,
+            Accept: 'application/vnd.github.v3+json',
+          },
+        },
+      );
+
+      const savedIncidents: any[] = [];
+
+      for (const item of commits) {
+        const commitHash = item.sha;
+        const commitAuthor = `${item.commit.author.name} <${item.commit.author.email}>`;
+
+        // Check if already scanned
+        const existing = await this.prisma.securityIncident.findFirst({
+          where: { monitorId, commitHash },
+        });
+
+        if (existing) {
+          continue;
+        }
+
+        // Fetch diff text
+        let diffText = 'Modified files in repository';
+        try {
+          const diffResponse = await axios.get(
+            `https://api.github.com/repos/${owner}/${repo}/commits/${commitHash}`,
+            {
+              headers: {
+                Authorization: `Bearer ${githubToken}`,
+                Accept: 'application/vnd.github.v3.diff',
+              },
+            },
+          );
+          diffText = diffResponse.data;
+        } catch (e: any) {
+          this.logger.warn(`Failed to fetch diff for commit ${commitHash}: ${e.message}`);
+        }
+
+        // Analyze
+        const analysis = await this.aiService.analyzeCommit(diffText);
+
+        // Save
+        const incident = await this.prisma.securityIncident.create({
+          data: {
+            monitorId,
+            commitHash,
+            commitAuthor,
+            riskType: analysis.riskType,
+            severity: analysis.severity,
+            description: analysis.description,
+            recommendation: analysis.recommendation,
+          },
+        });
+        savedIncidents.push(incident);
+      }
+
+      return { success: true, count: savedIncidents.length };
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to scan commits for ${owner}/${repo}`,
+        error.response?.data || error.message,
+      );
+      throw error;
+    }
+  }
+
   async handlePushEvent(payload: any) {
     // Determine which monitor this belongs to
     // In a real app we'd get monitorId from the query param of the webhook URL

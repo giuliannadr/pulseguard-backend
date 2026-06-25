@@ -17,6 +17,7 @@ const checker_module_1 = require("./checker/checker.module");
 const scheduler_module_1 = require("./scheduler/scheduler.module");
 const github_module_1 = require("./github/github.module");
 const ai_module_1 = require("./ai/ai.module");
+const playground_module_1 = require("./playground/playground.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -32,6 +33,7 @@ exports.AppModule = AppModule = __decorate([
             scheduler_module_1.SchedulerModule,
             github_module_1.GithubModule,
             ai_module_1.AiModule,
+            playground_module_1.PlaygroundModule,
         ],
     })
 ], AppModule);

@@ -8,5 +8,6 @@ import { AiModule } from '../ai/ai.module';
   imports: [PrismaModule, AiModule],
   controllers: [GithubController],
   providers: [GithubService],
+  exports: [GithubService],
 })
 export class GithubModule {}
