@@ -21,14 +21,29 @@ export class GithubService {
 
   async getUserRepos(token: string) {
     try {
-      const { data } = await axios.get('https://api.github.com/user/repos?sort=updated&per_page=20', {
+      // 1. Get the authenticated user's username (works even without repo scope)
+      const userRes = await axios.get('https://api.github.com/user', {
         headers: { Authorization: `Bearer ${token}` },
       });
+      const username = userRes.data.login;
+
+      // 2. Fetch the user's public repositories using the /users endpoint
+      // This bypasses the need for 'public_repo' scope on the token
+      const { data } = await axios.get(`https://api.github.com/users/${username}/repos?sort=updated&per_page=100`, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github.v3+json',
+        },
+      });
+      
       return data.map((repo: any) => ({
         id: repo.id,
         name: repo.name,
         full_name: repo.full_name,
         html_url: repo.html_url,
+        private: repo.private,
+        updated_at: repo.updated_at,
+        owner: { login: repo.owner.login }
       }));
     } catch (error) {
       this.logger.error('Failed to fetch github repos', error);

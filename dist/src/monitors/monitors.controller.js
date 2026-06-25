@@ -47,6 +47,9 @@ let MonitorsController = class MonitorsController {
     runCheckNow(id, req) {
         return this.service.runCheckNow(id, req.user.id);
     }
+    getSecurityIncidents(id, req) {
+        return this.service.getSecurityIncidents(id, req.user.id);
+    }
 };
 exports.MonitorsController = MonitorsController;
 __decorate([
@@ -114,6 +117,14 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], MonitorsController.prototype, "runCheckNow", null);
+__decorate([
+    (0, common_1.Get)(':id/security-incidents'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], MonitorsController.prototype, "getSecurityIncidents", null);
 exports.MonitorsController = MonitorsController = __decorate([
     (0, common_1.UseGuards)(supabase_auth_guard_1.SupabaseAuthGuard),
     (0, common_1.Controller)('monitors'),

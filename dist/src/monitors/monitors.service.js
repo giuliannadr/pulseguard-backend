@@ -93,6 +93,14 @@ let MonitorsService = class MonitorsService {
             data: { monitorId: id, ...result },
         });
     }
+    async getSecurityIncidents(id, userId) {
+        await this.findOne(id, userId);
+        return this.prisma.securityIncident.findMany({
+            where: { monitorId: id },
+            orderBy: { createdAt: 'desc' },
+            take: 50,
+        });
+    }
 };
 exports.MonitorsService = MonitorsService;
 exports.MonitorsService = MonitorsService = __decorate([

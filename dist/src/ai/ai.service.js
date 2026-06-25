@@ -48,6 +48,7 @@ let AiService = AiService_1 = class AiService {
                             },
                             severity: {
                                 type: generative_ai_1.SchemaType.STRING,
+                                format: 'enum',
                                 enum: ['Critical', 'High', 'Medium', 'Low', 'None'],
                                 description: 'The urgency/severity of the issue',
                             },

@@ -114,4 +114,5 @@ export declare class MonitorsController {
         checkedAt: Date;
         monitorId: string;
     }>;
+    getSecurityIncidents(id: string, req: any): Promise<any>;
 }

@@ -116,4 +116,5 @@ export declare class MonitorsService {
         checkedAt: Date;
         monitorId: string;
     }>;
+    getSecurityIncidents(id: string, userId: string): Promise<any>;
 }

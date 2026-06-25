@@ -6,11 +6,16 @@ export class GithubController {
   constructor(private readonly githubService: GithubService) {}
 
   @Get('repos')
-  async listRepos(@Headers('x-github-token') githubToken: string) {
-    if (!githubToken) {
-      throw new UnauthorizedException('Missing x-github-token header');
-    }
-    return this.githubService.getUserRepos(githubToken);
+  async getRepos(@Request() req: any) {
+    const token = req.headers['x-github-token'];
+    console.log('--- GET REPOS CALLED ---');
+    console.log('Headers:', req.headers);
+    console.log('Token:', token ? token.substring(0, 10) + '...' : 'NONE');
+    
+    if (!token) throw new UnauthorizedException('Missing GitHub token');
+    const repos = await this.githubService.getUserRepos(token);
+    console.log('Repos returned:', repos.length);
+    return repos;
   }
 
   @Post('connect/:monitorId')
