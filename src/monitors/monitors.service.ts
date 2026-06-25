@@ -25,7 +25,9 @@ export class MonitorsService {
   }
 
   async findOne(id: string, userId: string) {
-    const monitor = await this.prisma.monitor.findFirst({ where: { id, userId } });
+    const monitor = await this.prisma.monitor.findFirst({
+      where: { id, userId },
+    });
     if (!monitor) throw new NotFoundException('Monitor not found');
     return monitor;
   }
@@ -70,13 +72,17 @@ export class MonitorsService {
       take: 500,
     });
 
-    if (checks.length === 0) return { uptime: null, avgResponseMs: null, totalChecks: 0 };
+    if (checks.length === 0)
+      return { uptime: null, avgResponseMs: null, totalChecks: 0 };
 
     const upCount = checks.filter((c) => c.status === 'up').length;
     const withResponse = checks.filter((c) => c.responseTimeMs !== null);
     const avgResponseMs =
       withResponse.length > 0
-        ? Math.round(withResponse.reduce((s, c) => s + c.responseTimeMs!, 0) / withResponse.length)
+        ? Math.round(
+            withResponse.reduce((s, c) => s + c.responseTimeMs!, 0) /
+              withResponse.length,
+          )
         : null;
 
     return {
@@ -88,7 +94,11 @@ export class MonitorsService {
 
   async runCheckNow(id: string, userId: string) {
     const monitor = await this.findOne(id, userId);
-    const result = await this.checker.checkUrl(monitor.url, monitor.expectedStatus, monitor.expectedText);
+    const result = await this.checker.checkUrl(
+      monitor.url,
+      monitor.expectedStatus,
+      monitor.expectedText,
+    );
     return this.prisma.check.create({
       data: { monitorId: id, ...result },
     });

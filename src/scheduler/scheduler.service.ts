@@ -38,7 +38,12 @@ export class SchedulerService {
     }
   }
 
-  private async runCheck(monitor: { id: string; url: string; expectedStatus: number; expectedText: string | null }) {
+  private async runCheck(monitor: {
+    id: string;
+    url: string;
+    expectedStatus: number;
+    expectedText: string | null;
+  }) {
     const result = await this.checker.checkUrl(
       monitor.url,
       monitor.expectedStatus,
@@ -49,6 +54,8 @@ export class SchedulerService {
       data: { monitorId: monitor.id, ...result },
     });
 
-    this.logger.log(`[${result.status.toUpperCase()}] ${monitor.url} — ${result.responseTimeMs}ms`);
+    this.logger.log(
+      `[${result.status.toUpperCase()}] ${monitor.url} — ${result.responseTimeMs}ms`,
+    );
   }
 }

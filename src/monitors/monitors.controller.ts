@@ -36,7 +36,11 @@ export class MonitorsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateMonitorDto, @Request() req: any) {
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateMonitorDto,
+    @Request() req: any,
+  ) {
     return this.service.update(id, req.user.id, dto);
   }
 
@@ -51,7 +55,11 @@ export class MonitorsController {
     @Query('limit') limit: string,
     @Request() req: any,
   ) {
-    return this.service.getChecks(id, req.user.id, limit ? parseInt(limit) : 100);
+    return this.service.getChecks(
+      id,
+      req.user.id,
+      limit ? parseInt(limit) : 100,
+    );
   }
 
   @Get(':id/metrics')

@@ -10,8 +10,8 @@ export class GithubService {
   // Hardcode backend URL for demo purposes, normally in env
   // For Railway/local demo, you'd use a public URL or ngrok
   // Assuming frontend knows backend URL, let's just use a placeholder
-  private readonly WEBHOOK_URL = process.env.API_URL 
-    ? `${process.env.API_URL}/github/webhook` 
+  private readonly WEBHOOK_URL = process.env.API_URL
+    ? `${process.env.API_URL}/github/webhook`
     : 'https://pulseguard-backend.up.railway.app/github/webhook';
 
   constructor(
@@ -30,12 +30,15 @@ export class GithubService {
       // 2. Fetch the user's public repositories using the /users endpoint
       // This bypasses the need for 'public_repo' scope on the token
       // WE MUST NOT SEND THE TOKEN HERE, otherwise GitHub restricts the response!
-      const { data } = await axios.get(`https://api.github.com/users/${username}/repos?sort=updated&per_page=100`, {
-        headers: { 
-          Accept: 'application/vnd.github.v3+json',
+      const { data } = await axios.get(
+        `https://api.github.com/users/${username}/repos?sort=updated&per_page=100`,
+        {
+          headers: {
+            Accept: 'application/vnd.github.v3+json',
+          },
         },
-      });
-      
+      );
+
       return data.map((repo: any) => ({
         id: repo.id,
         name: repo.name,
@@ -43,7 +46,7 @@ export class GithubService {
         html_url: repo.html_url,
         private: repo.private,
         updated_at: repo.updated_at,
-        owner: { login: repo.owner.login }
+        owner: { login: repo.owner.login },
       }));
     } catch (error) {
       this.logger.error('Failed to fetch github repos', error);
@@ -51,8 +54,15 @@ export class GithubService {
     }
   }
 
-  async autoConfigureWebhook(monitorId: string, owner: string, repo: string, token: string) {
-    const monitor = await this.prisma.monitor.findUnique({ where: { id: monitorId } });
+  async autoConfigureWebhook(
+    monitorId: string,
+    owner: string,
+    repo: string,
+    token: string,
+  ) {
+    const monitor = await this.prisma.monitor.findUnique({
+      where: { id: monitorId },
+    });
     if (!monitor) throw new NotFoundException('Monitor not found');
 
     const webhookPayload = {
@@ -70,11 +80,11 @@ export class GithubService {
         `https://api.github.com/repos/${owner}/${repo}/hooks`,
         webhookPayload,
         {
-          headers: { 
+          headers: {
             Authorization: `Bearer ${token}`,
             Accept: 'application/vnd.github.v3+json',
           },
-        }
+        },
       );
 
       await this.prisma.monitor.update({
@@ -87,7 +97,10 @@ export class GithubService {
 
       return { success: true, webhookId: data.id };
     } catch (error: any) {
-      this.logger.error('Failed to create webhook', error.response?.data || error.message);
+      this.logger.error(
+        'Failed to create webhook',
+        error.response?.data || error.message,
+      );
       // For demo purposes, if it fails (e.g. repo not found or lacks admin rights),
       // we still link the repo to the monitor to simulate success.
       await this.prisma.monitor.update({

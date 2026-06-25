@@ -1,4 +1,12 @@
-import { Controller, Get, Param, Patch, Request, UseGuards, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Request,
+  UseGuards,
+  NotFoundException,
+} from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -15,9 +23,9 @@ export class SecurityIncidentsController {
       take: 100,
       include: {
         monitor: {
-          select: { name: true, url: true }
-        }
-      }
+          select: { name: true, url: true },
+        },
+      },
     });
   }
 
@@ -25,14 +33,14 @@ export class SecurityIncidentsController {
   async resolve(@Param('id') id: string, @Request() req: any) {
     // Ensure the incident belongs to a monitor owned by the user
     const incident = await this.prisma.securityIncident.findFirst({
-      where: { id, monitor: { userId: req.user.id } }
+      where: { id, monitor: { userId: req.user.id } },
     });
-    
+
     if (!incident) throw new NotFoundException('Incident not found');
 
     return this.prisma.securityIncident.update({
       where: { id },
-      data: { resolved: true }
+      data: { resolved: true },
     });
   }
 }

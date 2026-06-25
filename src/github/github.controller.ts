@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Headers, UnauthorizedException, Param, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Headers,
+  UnauthorizedException,
+  Param,
+  Req,
+} from '@nestjs/common';
 import { GithubService } from './github.service';
 
 @Controller('github')
@@ -11,7 +20,7 @@ export class GithubController {
     console.log('--- GET REPOS CALLED ---');
     console.log('Headers:', req.headers);
     console.log('Token:', token ? token.substring(0, 10) + '...' : 'NONE');
-    
+
     if (!token) throw new UnauthorizedException('Missing GitHub token');
     const repos = await this.githubService.getUserRepos(token);
     console.log('Repos returned:', repos.length);
@@ -27,7 +36,12 @@ export class GithubController {
     if (!githubToken) {
       throw new UnauthorizedException('Missing x-github-token header');
     }
-    return this.githubService.autoConfigureWebhook(monitorId, body.owner, body.repo, githubToken);
+    return this.githubService.autoConfigureWebhook(
+      monitorId,
+      body.owner,
+      body.repo,
+      githubToken,
+    );
   }
 
   @Post('webhook')

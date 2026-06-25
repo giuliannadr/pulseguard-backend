@@ -36,8 +36,12 @@ export class CheckerService {
       const body = expectedText ? await response.text() : null;
 
       const statusOk = statusCode === expectedStatus;
-      const textOk = expectedText ? body?.includes(expectedText) ?? false : true;
-      const sslDaysLeft = url.startsWith('https') ? await this.getSslDaysLeft(url) : null;
+      const textOk = expectedText
+        ? (body?.includes(expectedText) ?? false)
+        : true;
+      const sslDaysLeft = url.startsWith('https')
+        ? await this.getSslDaysLeft(url)
+        : null;
 
       let status: 'up' | 'down' | 'degraded';
       if (!statusOk || !textOk) {
@@ -48,7 +52,13 @@ export class CheckerService {
         status = 'up';
       }
 
-      return { status, statusCode, responseTimeMs, sslDaysLeft, errorMessage: null };
+      return {
+        status,
+        statusCode,
+        responseTimeMs,
+        sslDaysLeft,
+        errorMessage: null,
+      };
     } catch (err: any) {
       const responseTimeMs = Date.now() - start;
       const isTimeout = err?.name === 'AbortError';
@@ -57,7 +67,9 @@ export class CheckerService {
         statusCode: null,
         responseTimeMs,
         sslDaysLeft: null,
-        errorMessage: isTimeout ? 'Request timed out after 15s' : String(err?.message ?? err),
+        errorMessage: isTimeout
+          ? 'Request timed out after 15s'
+          : String(err?.message ?? err),
       };
     }
   }
@@ -66,16 +78,24 @@ export class CheckerService {
     return new Promise((resolve) => {
       try {
         const { hostname } = new URL(url);
-        const socket = tls.connect({ host: hostname, port: 443, servername: hostname }, () => {
-          const cert = socket.getPeerCertificate();
-          socket.destroy();
-          if (!cert?.valid_to) return resolve(null);
-          const expiresAt = new Date(cert.valid_to);
-          const daysLeft = Math.floor((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-          resolve(daysLeft);
-        });
+        const socket = tls.connect(
+          { host: hostname, port: 443, servername: hostname },
+          () => {
+            const cert = socket.getPeerCertificate();
+            socket.destroy();
+            if (!cert?.valid_to) return resolve(null);
+            const expiresAt = new Date(cert.valid_to);
+            const daysLeft = Math.floor(
+              (expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+            );
+            resolve(daysLeft);
+          },
+        );
         socket.on('error', () => resolve(null));
-        socket.setTimeout(5000, () => { socket.destroy(); resolve(null); });
+        socket.setTimeout(5000, () => {
+          socket.destroy();
+          resolve(null);
+        });
       } catch {
         resolve(null);
       }

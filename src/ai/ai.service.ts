@@ -28,8 +28,10 @@ export class AiService {
       return {
         riskType: 'Mock Logic Flaw',
         severity: 'Medium',
-        description: 'This is a mock AI analysis because GEMINI_API_KEY is not set. The commit diff might contain unhandled promise rejections.',
-        recommendation: 'Add proper try-catch blocks or error handling middleware.',
+        description:
+          'This is a mock AI analysis because GEMINI_API_KEY is not set. The commit diff might contain unhandled promise rejections.',
+        recommendation:
+          'Add proper try-catch blocks or error handling middleware.',
       };
     }
 
@@ -43,7 +45,8 @@ export class AiService {
             properties: {
               riskType: {
                 type: SchemaType.STRING,
-                description: 'The type of security or operational risk (e.g., SQL Injection, Exposed Secret, Logic Bug, Null Pointer, None)',
+                description:
+                  'The type of security or operational risk (e.g., SQL Injection, Exposed Secret, Logic Bug, Null Pointer, None)',
               },
               severity: {
                 type: SchemaType.STRING,
@@ -53,11 +56,13 @@ export class AiService {
               },
               description: {
                 type: SchemaType.STRING,
-                description: 'A brief explanation of why this code change is risky or what it breaks',
+                description:
+                  'A brief explanation of why this code change is risky or what it breaks',
               },
               recommendation: {
                 type: SchemaType.STRING,
-                description: 'A code snippet or actionable advice on how to fix the issue',
+                description:
+                  'A code snippet or actionable advice on how to fix the issue',
               },
             },
             required: ['riskType', 'severity', 'description', 'recommendation'],
