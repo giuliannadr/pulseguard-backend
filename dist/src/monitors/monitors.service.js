@@ -33,7 +33,9 @@ let MonitorsService = class MonitorsService {
         });
     }
     async findOne(id, userId) {
-        const monitor = await this.prisma.monitor.findFirst({ where: { id, userId } });
+        const monitor = await this.prisma.monitor.findFirst({
+            where: { id, userId },
+        });
         if (!monitor)
             throw new common_1.NotFoundException('Monitor not found');
         return monitor;
@@ -78,7 +80,8 @@ let MonitorsService = class MonitorsService {
         const upCount = checks.filter((c) => c.status === 'up').length;
         const withResponse = checks.filter((c) => c.responseTimeMs !== null);
         const avgResponseMs = withResponse.length > 0
-            ? Math.round(withResponse.reduce((s, c) => s + c.responseTimeMs, 0) / withResponse.length)
+            ? Math.round(withResponse.reduce((s, c) => s + c.responseTimeMs, 0) /
+                withResponse.length)
             : null;
         return {
             uptime: Math.round((upCount / checks.length) * 10000) / 100,

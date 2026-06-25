@@ -47,7 +47,7 @@ let GithubService = GithubService_1 = class GithubService {
                 html_url: repo.html_url,
                 private: repo.private,
                 updated_at: repo.updated_at,
-                owner: { login: repo.owner.login }
+                owner: { login: repo.owner.login },
             }));
         }
         catch (error) {
@@ -56,7 +56,9 @@ let GithubService = GithubService_1 = class GithubService {
         }
     }
     async autoConfigureWebhook(monitorId, owner, repo, token) {
-        const monitor = await this.prisma.monitor.findUnique({ where: { id: monitorId } });
+        const monitor = await this.prisma.monitor.findUnique({
+            where: { id: monitorId },
+        });
         if (!monitor)
             throw new common_1.NotFoundException('Monitor not found');
         const webhookPayload = {

@@ -28,20 +28,20 @@ let SecurityIncidentsController = class SecurityIncidentsController {
             take: 100,
             include: {
                 monitor: {
-                    select: { name: true, url: true }
-                }
-            }
+                    select: { name: true, url: true },
+                },
+            },
         });
     }
     async resolve(id, req) {
         const incident = await this.prisma.securityIncident.findFirst({
-            where: { id, monitor: { userId: req.user.id } }
+            where: { id, monitor: { userId: req.user.id } },
         });
         if (!incident)
             throw new common_1.NotFoundException('Incident not found');
         return this.prisma.securityIncident.update({
             where: { id },
-            data: { resolved: true }
+            data: { resolved: true },
         });
     }
 };

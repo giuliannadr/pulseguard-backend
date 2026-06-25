@@ -19,7 +19,7 @@ exports.GithubModule = GithubModule = __decorate([
     (0, common_1.Module)({
         imports: [prisma_module_1.PrismaModule, ai_module_1.AiModule],
         controllers: [github_controller_1.GithubController],
-        providers: [github_service_1.GithubService]
+        providers: [github_service_1.GithubService],
     })
 ], GithubModule);
 //# sourceMappingURL=github.module.js.map

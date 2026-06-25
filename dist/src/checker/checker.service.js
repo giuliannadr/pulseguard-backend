@@ -59,8 +59,12 @@ let CheckerService = CheckerService_1 = class CheckerService {
             const statusCode = response.status;
             const body = expectedText ? await response.text() : null;
             const statusOk = statusCode === expectedStatus;
-            const textOk = expectedText ? body?.includes(expectedText) ?? false : true;
-            const sslDaysLeft = url.startsWith('https') ? await this.getSslDaysLeft(url) : null;
+            const textOk = expectedText
+                ? (body?.includes(expectedText) ?? false)
+                : true;
+            const sslDaysLeft = url.startsWith('https')
+                ? await this.getSslDaysLeft(url)
+                : null;
             let status;
             if (!statusOk || !textOk) {
                 status = 'down';
@@ -71,7 +75,13 @@ let CheckerService = CheckerService_1 = class CheckerService {
             else {
                 status = 'up';
             }
-            return { status, statusCode, responseTimeMs, sslDaysLeft, errorMessage: null };
+            return {
+                status,
+                statusCode,
+                responseTimeMs,
+                sslDaysLeft,
+                errorMessage: null,
+            };
         }
         catch (err) {
             const responseTimeMs = Date.now() - start;
@@ -81,7 +91,9 @@ let CheckerService = CheckerService_1 = class CheckerService {
                 statusCode: null,
                 responseTimeMs,
                 sslDaysLeft: null,
-                errorMessage: isTimeout ? 'Request timed out after 15s' : String(err?.message ?? err),
+                errorMessage: isTimeout
+                    ? 'Request timed out after 15s'
+                    : String(err?.message ?? err),
             };
         }
     }
@@ -99,7 +111,10 @@ let CheckerService = CheckerService_1 = class CheckerService {
                     resolve(daysLeft);
                 });
                 socket.on('error', () => resolve(null));
-                socket.setTimeout(5000, () => { socket.destroy(); resolve(null); });
+                socket.setTimeout(5000, () => {
+                    socket.destroy();
+                    resolve(null);
+                });
             }
             catch {
                 resolve(null);
