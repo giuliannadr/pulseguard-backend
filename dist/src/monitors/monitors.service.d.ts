@@ -26,11 +26,13 @@ export declare class MonitorsService {
         expectedText: string | null;
         intervalMinutes: number;
         notificationWebhookUrl: string | null;
+        notificationEmail: string | null;
         isActive: boolean;
         id: string;
         userId: string;
         githubRepoUrl: string | null;
         githubWebhookId: string | null;
+        maintenanceWindows: import("@prisma/client/runtime/client").JsonValue | null;
         lastStatus: string | null;
         createdAt: Date;
         updatedAt: Date;
@@ -42,11 +44,13 @@ export declare class MonitorsService {
         expectedText: string | null;
         intervalMinutes: number;
         notificationWebhookUrl: string | null;
+        notificationEmail: string | null;
         isActive: boolean;
         id: string;
         userId: string;
         githubRepoUrl: string | null;
         githubWebhookId: string | null;
+        maintenanceWindows: import("@prisma/client/runtime/client").JsonValue | null;
         lastStatus: string | null;
         createdAt: Date;
         updatedAt: Date;
@@ -58,11 +62,13 @@ export declare class MonitorsService {
         expectedText: string | null;
         intervalMinutes: number;
         notificationWebhookUrl: string | null;
+        notificationEmail: string | null;
         isActive: boolean;
         id: string;
         userId: string;
         githubRepoUrl: string | null;
         githubWebhookId: string | null;
+        maintenanceWindows: import("@prisma/client/runtime/client").JsonValue | null;
         lastStatus: string | null;
         createdAt: Date;
         updatedAt: Date;
@@ -76,11 +82,13 @@ export declare class MonitorsService {
         expectedText: string | null;
         intervalMinutes: number;
         notificationWebhookUrl: string | null;
+        notificationEmail: string | null;
         isActive: boolean;
         id: string;
         userId: string;
         githubRepoUrl: string | null;
         githubWebhookId: string | null;
+        maintenanceWindows: import("@prisma/client/runtime/client").JsonValue | null;
         lastStatus: string | null;
         createdAt: Date;
         updatedAt: Date;
@@ -92,11 +100,13 @@ export declare class MonitorsService {
         expectedText: string | null;
         intervalMinutes: number;
         notificationWebhookUrl: string | null;
+        notificationEmail: string | null;
         isActive: boolean;
         id: string;
         userId: string;
         githubRepoUrl: string | null;
         githubWebhookId: string | null;
+        maintenanceWindows: import("@prisma/client/runtime/client").JsonValue | null;
         lastStatus: string | null;
         createdAt: Date;
         updatedAt: Date;
@@ -146,4 +156,9 @@ export declare class MonitorsService {
         success: boolean;
         count: number;
     }>;
+    getDowntimeHistory(id: string, userId: string): Promise<{
+        start: Date;
+        end: Date | null;
+        durationMs: number;
+    }[]>;
 }

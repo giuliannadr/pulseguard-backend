@@ -78,6 +78,11 @@ export class MonitorsController {
     return this.service.getSecurityIncidents(id, req.user.id);
   }
 
+  @Get(':id/downtime')
+  getDowntimeHistory(@Param('id') id: string, @Request() req: any) {
+    return this.service.getDowntimeHistory(id, req.user.id);
+  }
+
   @Post(':id/scan-repo')
   scanRepo(
     @Param('id') id: string,

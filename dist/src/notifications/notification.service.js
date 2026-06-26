@@ -15,7 +15,16 @@ const common_1 = require("@nestjs/common");
 const axios_1 = __importDefault(require("axios"));
 let NotificationService = NotificationService_1 = class NotificationService {
     logger = new common_1.Logger(NotificationService_1.name);
-    async send(webhookUrl, monitorName, monitorUrl, status, details) {
+    async send(webhookUrl, monitorName, monitorUrl, status, details, email) {
+        const isRecovery = status === 'up';
+        const emoji = isRecovery ? '✅' : '🔴';
+        const title = isRecovery ? `${monitorName} is back online` : `${monitorName} is DOWN`;
+        await Promise.all([
+            webhookUrl?.trim() ? this.sendWebhook(webhookUrl, monitorName, monitorUrl, isRecovery, emoji, title, details) : Promise.resolve(),
+            email?.trim() ? this.sendEmail(email, monitorName, monitorUrl, isRecovery, title, details) : Promise.resolve(),
+        ]);
+    }
+    async sendWebhook(webhookUrl, monitorName, monitorUrl, isRecovery, emoji, title, details) {
         try {
             new URL(webhookUrl);
         }
@@ -23,16 +32,11 @@ let NotificationService = NotificationService_1 = class NotificationService {
             this.logger.warn(`Invalid webhook URL for ${monitorName}: ${webhookUrl}`);
             return;
         }
-        const isRecovery = status === 'up';
-        const isDiscord = webhookUrl.includes('discord.com/api/webhooks');
-        const isSlack = webhookUrl.includes('hooks.slack.com');
-        const emoji = isRecovery ? '✅' : '🔴';
-        const title = isRecovery
-            ? `${monitorName} is back online`
-            : `${monitorName} is DOWN`;
         const color = isRecovery ? 0x00e676 : 0xff1744;
         const urlLine = monitorUrl ? `\n**URL:** ${monitorUrl}` : '';
         const detailsLine = details ? `\n**Error:** ${details}` : '';
+        const isDiscord = webhookUrl.includes('discord.com/api/webhooks');
+        const isSlack = webhookUrl.includes('hooks.slack.com');
         let payload;
         if (isDiscord) {
             payload = {
@@ -48,15 +52,10 @@ let NotificationService = NotificationService_1 = class NotificationService {
         else if (isSlack) {
             payload = {
                 text: `${emoji} *${title}*`,
-                blocks: [
-                    {
+                blocks: [{
                         type: 'section',
-                        text: {
-                            type: 'mrkdwn',
-                            text: `${emoji} *${title}*\n${monitorUrl ?? ''}${details ? `\nError: ${details}` : ''}`,
-                        },
-                    },
-                ],
+                        text: { type: 'mrkdwn', text: `${emoji} *${title}*\n${monitorUrl ?? ''}${details ? `\nError: ${details}` : ''}` },
+                    }],
             };
         }
         else {
@@ -64,17 +63,54 @@ let NotificationService = NotificationService_1 = class NotificationService {
                 event: isRecovery ? 'monitor_recovery' : 'monitor_down',
                 monitor: monitorName,
                 url: monitorUrl,
-                status,
+                status: isRecovery ? 'up' : 'down',
                 detail: details ?? null,
                 timestamp: new Date().toISOString(),
             };
         }
         try {
             await axios_1.default.post(webhookUrl, payload, { timeout: 5000 });
-            this.logger.log(`Notification sent for ${monitorName} (${status})`);
+            this.logger.log(`Webhook sent for ${monitorName} (${isRecovery ? 'up' : 'down'})`);
         }
         catch (err) {
-            this.logger.warn(`Failed to send notification for ${monitorName}: ${err.message}`);
+            this.logger.warn(`Webhook failed for ${monitorName}: ${err.message}`);
+        }
+    }
+    async sendEmail(to, monitorName, monitorUrl, isRecovery, title, details) {
+        const resendKey = process.env.RESEND_API_KEY;
+        if (!resendKey) {
+            this.logger.warn('RESEND_API_KEY not set — email notifications disabled');
+            return;
+        }
+        const color = isRecovery ? '#00E676' : '#FF1744';
+        const urlRow = monitorUrl ? `<tr><td style="color:#888;padding:4px 0">URL</td><td>${monitorUrl}</td></tr>` : '';
+        const errorRow = details ? `<tr><td style="color:#888;padding:4px 0">Error</td><td style="color:#FF1744">${details}</td></tr>` : '';
+        const html = `
+<div style="background:#0A0A0A;color:#F0F0F0;font-family:monospace;padding:32px;border-radius:6px;max-width:520px">
+  <div style="font-size:11px;color:#CAFF00;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">// PulseGuard</div>
+  <h2 style="margin:0 0 24px;font-size:22px;color:${color}">${title}</h2>
+  <table style="border-collapse:collapse;font-size:13px;width:100%">
+    <tr><td style="color:#888;padding:4px 0;width:80px">Monitor</td><td>${monitorName}</td></tr>
+    <tr><td style="color:#888;padding:4px 0">Status</td><td style="color:${color}">${isRecovery ? '✅ Back online' : '🔴 Down'}</td></tr>
+    ${urlRow}${errorRow}
+    <tr><td style="color:#888;padding:4px 0">Time</td><td>${new Date().toLocaleString()}</td></tr>
+  </table>
+  <div style="margin-top:24px;font-size:11px;color:#4A4A4A">Sent by PulseGuard · Manage alerts in your dashboard</div>
+</div>`;
+        try {
+            await axios_1.default.post('https://api.resend.com/emails', {
+                from: 'PulseGuard <alerts@pulseguard.app>',
+                to,
+                subject: `[PulseGuard] ${title}`,
+                html,
+            }, {
+                headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+                timeout: 8000,
+            });
+            this.logger.log(`Email sent to ${to} for ${monitorName}`);
+        }
+        catch (err) {
+            this.logger.warn(`Email failed for ${monitorName}: ${err.message}`);
         }
     }
 };

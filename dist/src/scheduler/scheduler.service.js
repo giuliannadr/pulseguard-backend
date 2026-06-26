@@ -16,6 +16,19 @@ const schedule_1 = require("@nestjs/schedule");
 const prisma_service_1 = require("../prisma/prisma.service");
 const checker_service_1 = require("../checker/checker.service");
 const notification_service_1 = require("../notifications/notification.service");
+function isInMaintenance(windows, now) {
+    if (!windows?.length)
+        return false;
+    const day = now.getDay();
+    const totalMins = now.getHours() * 60 + now.getMinutes();
+    return windows.some(w => {
+        if (!w.days.includes(day))
+            return false;
+        const start = w.startHour * 60 + w.startMin;
+        const end = w.endHour * 60 + w.endMin;
+        return end > start ? totalMins >= start && totalMins < end : totalMins >= start || totalMins < end;
+    });
+}
 let SchedulerService = SchedulerService_1 = class SchedulerService {
     prisma;
     checker;
@@ -32,6 +45,10 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
         });
         const now = new Date();
         for (const monitor of monitors) {
+            if (isInMaintenance(monitor.maintenanceWindows, now)) {
+                this.logger.log(`[MAINTENANCE] Skipping ${monitor.name}`);
+                continue;
+            }
             const lastCheck = await this.prisma.check.findFirst({
                 where: { monitorId: monitor.id },
                 orderBy: { checkedAt: 'desc' },
@@ -48,26 +65,16 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
         if (!monitor.url)
             return;
         const result = await this.checker.checkUrl(monitor.url, monitor.expectedStatus, monitor.expectedText);
-        await this.prisma.check.create({
-            data: { monitorId: monitor.id, ...result },
-        });
+        await this.prisma.check.create({ data: { monitorId: monitor.id, ...result } });
         const prev = previousStatus ?? monitor.lastStatus;
         const curr = result.status;
-        if (monitor.notificationWebhookUrl?.trim()) {
-            const wentDown = curr === 'down' && prev !== 'down';
-            const recovered = (curr === 'up' || curr === 'degraded') && prev === 'down';
-            if (wentDown) {
-                this.notifications.send(monitor.notificationWebhookUrl, monitor.name, monitor.url, 'down', result.errorMessage ?? undefined);
-            }
-            else if (recovered) {
-                this.notifications.send(monitor.notificationWebhookUrl, monitor.name, monitor.url, 'up');
-            }
+        const wentDown = curr === 'down' && prev !== 'down';
+        const recovered = (curr === 'up' || curr === 'degraded') && prev === 'down';
+        if (wentDown || recovered) {
+            this.notifications.send(monitor.notificationWebhookUrl, monitor.name, monitor.url, wentDown ? 'down' : 'up', wentDown ? (result.errorMessage ?? undefined) : undefined, monitor.notificationEmail);
         }
         if (prev !== curr) {
-            await this.prisma.monitor.update({
-                where: { id: monitor.id },
-                data: { lastStatus: curr },
-            });
+            await this.prisma.monitor.update({ where: { id: monitor.id }, data: { lastStatus: curr } });
         }
         this.logger.log(`[${curr.toUpperCase()}] ${monitor.url} — ${result.responseTimeMs}ms`);
     }

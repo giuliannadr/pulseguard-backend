@@ -18,6 +18,8 @@ model Monitor {
   githubRepoUrl            String?  @map("github_repo_url")
   githubWebhookId          String?  @map("github_webhook_id")
   notificationWebhookUrl   String?  @map("notification_webhook_url")
+  notificationEmail        String?  @map("notification_email")
+  maintenanceWindows       Json?    @map("maintenance_windows")
   lastStatus               String?  @map("last_status")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")

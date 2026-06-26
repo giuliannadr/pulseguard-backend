@@ -1,4 +1,5 @@
 import {
+  IsEmail,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -36,4 +37,8 @@ export class CreateMonitorDto {
   @IsUrl({ require_tld: false })
   @IsOptional()
   notificationWebhookUrl?: string;
+
+  @IsEmail()
+  @IsOptional()
+  notificationEmail?: string;
 }

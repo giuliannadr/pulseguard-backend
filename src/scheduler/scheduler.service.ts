@@ -4,6 +4,20 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CheckerService } from '../checker/checker.service';
 import { NotificationService } from '../notifications/notification.service';
 
+type MaintenanceWindow = { days: number[]; startHour: number; startMin: number; endHour: number; endMin: number };
+
+function isInMaintenance(windows: MaintenanceWindow[] | null | undefined, now: Date): boolean {
+  if (!windows?.length) return false;
+  const day = now.getDay();
+  const totalMins = now.getHours() * 60 + now.getMinutes();
+  return windows.some(w => {
+    if (!w.days.includes(day)) return false;
+    const start = w.startHour * 60 + w.startMin;
+    const end = w.endHour * 60 + w.endMin;
+    return end > start ? totalMins >= start && totalMins < end : totalMins >= start || totalMins < end;
+  });
+}
+
 @Injectable()
 export class SchedulerService {
   private readonly logger = new Logger(SchedulerService.name);
@@ -23,6 +37,11 @@ export class SchedulerService {
     const now = new Date();
 
     for (const monitor of monitors) {
+      if (isInMaintenance(monitor.maintenanceWindows as MaintenanceWindow[] | null, now)) {
+        this.logger.log(`[MAINTENANCE] Skipping ${monitor.name}`);
+        continue;
+      }
+
       const lastCheck = await this.prisma.check.findFirst({
         where: { monitorId: monitor.id },
         orderBy: { checkedAt: 'desc' },
@@ -48,54 +67,34 @@ export class SchedulerService {
       expectedStatus: number;
       expectedText: string | null;
       notificationWebhookUrl: string | null;
+      notificationEmail: string | null;
       lastStatus: string | null;
     },
     previousStatus: string | null,
   ) {
     if (!monitor.url) return;
 
-    const result = await this.checker.checkUrl(
-      monitor.url,
-      monitor.expectedStatus,
-      monitor.expectedText,
-    );
+    const result = await this.checker.checkUrl(monitor.url, monitor.expectedStatus, monitor.expectedText);
+    await this.prisma.check.create({ data: { monitorId: monitor.id, ...result } });
 
-    await this.prisma.check.create({
-      data: { monitorId: monitor.id, ...result },
-    });
-
-    // Detect status transitions and send notifications
     const prev = previousStatus ?? monitor.lastStatus;
     const curr = result.status;
+    const wentDown = curr === 'down' && prev !== 'down';
+    const recovered = (curr === 'up' || curr === 'degraded') && prev === 'down';
 
-    if (monitor.notificationWebhookUrl?.trim()) {
-      const wentDown = curr === 'down' && prev !== 'down';
-      const recovered = (curr === 'up' || curr === 'degraded') && prev === 'down';
-
-      if (wentDown) {
-        this.notifications.send(
-          monitor.notificationWebhookUrl,
-          monitor.name,
-          monitor.url,
-          'down',
-          result.errorMessage ?? undefined,
-        );
-      } else if (recovered) {
-        this.notifications.send(
-          monitor.notificationWebhookUrl,
-          monitor.name,
-          monitor.url,
-          'up',
-        );
-      }
+    if (wentDown || recovered) {
+      this.notifications.send(
+        monitor.notificationWebhookUrl,
+        monitor.name,
+        monitor.url,
+        wentDown ? 'down' : 'up',
+        wentDown ? (result.errorMessage ?? undefined) : undefined,
+        monitor.notificationEmail,
+      );
     }
 
-    // Persist last known status
     if (prev !== curr) {
-      await this.prisma.monitor.update({
-        where: { id: monitor.id },
-        data: { lastStatus: curr },
-      });
+      await this.prisma.monitor.update({ where: { id: monitor.id }, data: { lastStatus: curr } });
     }
 
     this.logger.log(`[${curr.toUpperCase()}] ${monitor.url} — ${result.responseTimeMs}ms`);

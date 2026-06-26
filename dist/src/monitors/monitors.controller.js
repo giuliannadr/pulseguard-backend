@@ -50,6 +50,9 @@ let MonitorsController = class MonitorsController {
     getSecurityIncidents(id, req) {
         return this.service.getSecurityIncidents(id, req.user.id);
     }
+    getDowntimeHistory(id, req) {
+        return this.service.getDowntimeHistory(id, req.user.id);
+    }
     scanRepo(id, req, githubToken) {
         return this.service.scanRepo(id, req.user.id, githubToken);
     }
@@ -128,6 +131,14 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], MonitorsController.prototype, "getSecurityIncidents", null);
+__decorate([
+    (0, common_1.Get)(':id/downtime'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], MonitorsController.prototype, "getDowntimeHistory", null);
 __decorate([
     (0, common_1.Post)(':id/scan-repo'),
     __param(0, (0, common_1.Param)('id')),

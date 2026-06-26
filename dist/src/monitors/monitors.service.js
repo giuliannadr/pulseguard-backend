@@ -53,6 +53,7 @@ let MonitorsService = class MonitorsService {
                 expectedText: dto.expectedText,
                 intervalMinutes: dto.intervalMinutes ?? 5,
                 notificationWebhookUrl: dto.notificationWebhookUrl ?? null,
+                notificationEmail: dto.notificationEmail ?? null,
             },
         });
     }
@@ -127,6 +128,30 @@ let MonitorsService = class MonitorsService {
             throw new Error('Invalid GitHub repository URL.');
         }
         return this.githubService.scanRepoCommits(id, owner, repoName, githubToken);
+    }
+    async getDowntimeHistory(id, userId) {
+        await this.findOne(id, userId);
+        const checks = await this.prisma.check.findMany({
+            where: { monitorId: id },
+            orderBy: { checkedAt: 'asc' },
+            take: 2000,
+        });
+        const windows = [];
+        let downStart = null;
+        for (const c of checks) {
+            if (c.status === 'down' && !downStart) {
+                downStart = c.checkedAt;
+            }
+            else if (c.status !== 'down' && downStart) {
+                windows.push({ start: downStart, end: c.checkedAt, durationMs: c.checkedAt.getTime() - downStart.getTime() });
+                downStart = null;
+            }
+        }
+        if (downStart) {
+            const now = new Date();
+            windows.push({ start: downStart, end: null, durationMs: now.getTime() - downStart.getTime() });
+        }
+        return windows.reverse().slice(0, 30);
     }
 };
 exports.MonitorsService = MonitorsService;

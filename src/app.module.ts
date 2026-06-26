@@ -11,6 +11,7 @@ import { GithubModule } from './github/github.module';
 import { AiModule } from './ai/ai.module';
 import { PlaygroundModule } from './playground/playground.module';
 import { NotificationModule } from './notifications/notification.module';
+import { PublicStatusModule } from './public/public-status.module';
 
 @Module({
   controllers: [HealthController],
@@ -26,6 +27,7 @@ import { NotificationModule } from './notifications/notification.module';
     AiModule,
     PlaygroundModule,
     NotificationModule,
+    PublicStatusModule,
   ],
 })
 export class AppModule {}

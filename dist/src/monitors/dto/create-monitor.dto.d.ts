@@ -5,4 +5,5 @@ export declare class CreateMonitorDto {
     expectedText?: string;
     intervalMinutes?: number;
     notificationWebhookUrl?: string;
+    notificationEmail?: string;
 }
