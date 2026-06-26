@@ -51,4 +51,28 @@ export declare class PlaygroundController {
             mitigation: string;
         };
     }>;
+    generatePatch(body: {
+        code: string;
+        findings: string;
+        language: string;
+    }): Promise<any>;
+    networkDiagnostic(body: {
+        url: string;
+    }): Promise<{
+        success: boolean;
+        timings: {
+            dnsLookupMs: number;
+            tcpConnectMs: number;
+            tlsHandshakeMs: number;
+            ttfbMs: number;
+            totalMs: number;
+        };
+        advice: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        timings?: undefined;
+        advice?: undefined;
+    }>;
 }

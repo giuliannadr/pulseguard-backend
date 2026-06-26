@@ -49,6 +49,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PlaygroundService = void 0;
 const common_1 = require("@nestjs/common");
 const ai_service_1 = require("../ai/ai.service");
+const checker_service_1 = require("../checker/checker.service");
 const axios_1 = __importDefault(require("axios"));
 const dns = __importStar(require("dns"));
 const tls = __importStar(require("tls"));
@@ -56,14 +57,23 @@ const generative_ai_1 = require("@google/generative-ai");
 const ssrf_guard_1 = require("../common/ssrf-guard");
 let PlaygroundService = PlaygroundService_1 = class PlaygroundService {
     aiService;
+    checkerService;
     logger = new common_1.Logger(PlaygroundService_1.name);
     genAI = null;
-    constructor(aiService) {
+    constructor(aiService, checkerService) {
         this.aiService = aiService;
+        this.checkerService = checkerService;
         const apiKey = process.env.GEMINI_API_KEY;
         if (apiKey) {
             this.genAI = new generative_ai_1.GoogleGenerativeAI(apiKey);
         }
+    }
+    cleanJson(text) {
+        let cleaned = text.trim();
+        if (cleaned.startsWith('```')) {
+            cleaned = cleaned.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+        }
+        return cleaned;
     }
     async auditEndpoint(url, method, headers, body) {
         await (0, ssrf_guard_1.assertSafeUrl)(url);
@@ -135,7 +145,7 @@ let PlaygroundService = PlaygroundService_1 = class PlaygroundService {
         Error Encountered: ${errorMsg || 'None'}
         `;
                 const result = await model.generateContent(prompt);
-                aiAuditReport = JSON.parse(result.response.text());
+                aiAuditReport = JSON.parse(this.cleanJson(result.response.text()));
             }
             catch (err) {
                 this.logger.error('Gemini API Audit failed', err);
@@ -189,7 +199,7 @@ let PlaygroundService = PlaygroundService_1 = class PlaygroundService {
       ${code}
       `;
             const result = await model.generateContent(prompt);
-            return JSON.parse(result.response.text());
+            return JSON.parse(this.cleanJson(result.response.text()));
         }
         catch (e) {
             this.logger.error('Failed to audit code with Gemini', e);
@@ -304,7 +314,7 @@ let PlaygroundService = PlaygroundService_1 = class PlaygroundService {
         - Key bits: ${sslInfo.bits}
         `;
                 const result = await model.generateContent(prompt);
-                aiReport = JSON.parse(result.response.text());
+                aiReport = JSON.parse(this.cleanJson(result.response.text()));
             }
             catch (e) {
                 this.logger.error('Gemini DNS/SSL analysis failed', e);
@@ -370,11 +380,52 @@ let PlaygroundService = PlaygroundService_1 = class PlaygroundService {
                 results.push({ error: err.message });
             }
         }
+        const mainResult = results[0];
+        const isRateLimit = attackType === 'rate-limit';
+        let defaultIsVulnerable = 'No';
+        let defaultSeverity = 'None';
+        let defaultDiagnosis = 'No anomalies detected.';
+        let defaultMitigation = 'No immediate action required.';
+        if (isRateLimit) {
+            const blocked = results.some(r => r.status === 429);
+            if (!blocked) {
+                defaultIsVulnerable = 'Yes';
+                defaultSeverity = 'Medium';
+                defaultDiagnosis = 'The endpoint did not rate-limit multiple rapid concurrent requests (no HTTP 429 returned).';
+                defaultMitigation = 'Implement rate-limiting middleware (e.g., using express-rate-limit or NestJS Throttler).';
+            }
+            else {
+                defaultDiagnosis = 'Rate limiting successfully blocked rapid concurrent requests.';
+            }
+        }
+        else if (mainResult) {
+            if (mainResult.status === 200) {
+                defaultIsVulnerable = 'Suspected';
+                defaultSeverity = 'Low';
+                defaultDiagnosis = 'The server responded with 200 OK. Standard diagnostics cannot confirm if input parameters are processed securely without deep analysis.';
+                defaultMitigation = 'Perform manual penetration testing to verify input sanitization.';
+            }
+            else if (mainResult.status && mainResult.status >= 500) {
+                defaultIsVulnerable = 'Suspected';
+                defaultSeverity = 'Medium';
+                defaultDiagnosis = `The server responded with HTTP ${mainResult.status} (Internal Server Error), which might indicate unhandled input processing errors.`;
+                defaultMitigation = 'Ensure exceptions are caught and sanitized, and database errors are not exposed.';
+            }
+            else if (mainResult.status && mainResult.status >= 400 && mainResult.status < 500) {
+                defaultIsVulnerable = 'No';
+                defaultDiagnosis = `The server correctly blocked the request with HTTP ${mainResult.status}.`;
+                defaultMitigation = 'Configuration is correct. Keep monitoring.';
+            }
+            else if (mainResult.error) {
+                defaultIsVulnerable = 'No';
+                defaultDiagnosis = `Could not reach target endpoint: ${mainResult.error}`;
+            }
+        }
         let aiAnalysis = {
-            isVulnerable: 'Yes',
-            severity: 'High',
-            diagnosis: 'The server answered with 200 OK and allowed database payloads.',
-            mitigation: 'Implement input sanitization and use parameterized ORMs.'
+            isVulnerable: defaultIsVulnerable,
+            severity: defaultSeverity,
+            diagnosis: defaultDiagnosis,
+            mitigation: defaultMitigation
         };
         if (this.genAI) {
             try {
@@ -412,7 +463,7 @@ let PlaygroundService = PlaygroundService_1 = class PlaygroundService {
            - If it contains raw database error stack traces or Prisma/SQL syntax errors, mark isVulnerable as 'Yes'.
         `;
                 const result = await model.generateContent(prompt);
-                aiAnalysis = JSON.parse(result.response.text());
+                aiAnalysis = JSON.parse(this.cleanJson(result.response.text()));
             }
             catch (e) {
                 this.logger.error('Gemini attack analysis failed', e);
@@ -426,10 +477,105 @@ let PlaygroundService = PlaygroundService_1 = class PlaygroundService {
             analysis: aiAnalysis
         };
     }
+    async generatePatch(code, findings, language) {
+        if (!this.genAI) {
+            return {
+                patch: '',
+                explanation: 'AI service not configured.'
+            };
+        }
+        try {
+            const model = this.genAI.getGenerativeModel({
+                model: 'gemini-2.5-flash',
+                generationConfig: {
+                    responseMimeType: 'application/json',
+                    responseSchema: {
+                        type: generative_ai_1.SchemaType.OBJECT,
+                        properties: {
+                            patch: { type: generative_ai_1.SchemaType.STRING, description: 'The complete corrected code block or diff resolving the security findings' },
+                            explanation: { type: generative_ai_1.SchemaType.STRING, description: 'Explanation of what was fixed and why this resolves the issue' }
+                        },
+                        required: ['patch', 'explanation']
+                    }
+                }
+            });
+            const prompt = `
+      You are a senior DevSecOps engineer. Review the following code snippet, which contains security vulnerabilities/findings.
+      
+      Language/Context: ${language}
+      Vulnerabilities/Findings: ${findings}
+
+      Original Code:
+      ${code}
+
+      Generate a clean, secure patch to fix the findings. Return a JSON containing the corrected code ("patch") and a brief explanation of the security fixes ("explanation").
+      `;
+            const result = await model.generateContent(prompt);
+            return JSON.parse(this.cleanJson(result.response.text()));
+        }
+        catch (e) {
+            this.logger.error('Failed to generate patch with Gemini', e);
+            return {
+                patch: '// Error generating patch: ' + e.message,
+                explanation: 'Could not generate patch.'
+            };
+        }
+    }
+    async getNetworkDiagnostics(url) {
+        try {
+            const timings = await this.checkerService.measureConnectionDetail(url);
+            let aiAdvice = 'All networks phases are operational.';
+            if (this.genAI) {
+                try {
+                    const model = this.genAI.getGenerativeModel({
+                        model: 'gemini-2.5-flash',
+                        generationConfig: {
+                            responseMimeType: 'application/json',
+                            responseSchema: {
+                                type: generative_ai_1.SchemaType.OBJECT,
+                                properties: {
+                                    advice: { type: generative_ai_1.SchemaType.STRING, description: 'Actionable suggestions to improve network latency or TLS handshake times' }
+                                },
+                                required: ['advice']
+                            }
+                        }
+                    });
+                    const prompt = `
+          You are a cloud infrastructure architect. Review the connection timings for this target URL: ${url}
+          - DNS Lookup: ${timings.dnsLookupMs}ms
+          - TCP Connection: ${timings.tcpConnectMs}ms
+          - TLS Handshake: ${timings.tlsHandshakeMs}ms
+          - TTFB (Time to First Byte): ${timings.ttfbMs}ms
+          - Total Latency: ${timings.totalMs}ms
+
+          Provide brief, actionable performance suggestions (e.g. recommend CDN, HTTP/3, Keep-Alive, closer server zones, or DNS providers).
+          `;
+                    const result = await model.generateContent(prompt);
+                    const parsed = JSON.parse(this.cleanJson(result.response.text()));
+                    aiAdvice = parsed.advice;
+                }
+                catch (err) {
+                    this.logger.error('Gemini network diagnostics advice failed', err);
+                }
+            }
+            return {
+                success: true,
+                timings,
+                advice: aiAdvice
+            };
+        }
+        catch (e) {
+            return {
+                success: false,
+                error: e.message || 'Failed to diagnostic URL'
+            };
+        }
+    }
 };
 exports.PlaygroundService = PlaygroundService;
 exports.PlaygroundService = PlaygroundService = PlaygroundService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [ai_service_1.AiService])
+    __metadata("design:paramtypes", [ai_service_1.AiService,
+        checker_service_1.CheckerService])
 ], PlaygroundService);
 //# sourceMappingURL=playground.service.js.map

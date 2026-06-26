@@ -93,9 +93,14 @@ export class SchedulerService {
       );
     }
 
-    if (prev !== curr) {
-      await this.prisma.monitor.update({ where: { id: monitor.id }, data: { lastStatus: curr } });
-    }
+    await this.prisma.monitor.update({
+      where: { id: monitor.id },
+      data: {
+        lastStatus: curr,
+        securityGrade: result.securityGrade,
+        securityHeaders: result.securityHeaders ?? undefined,
+      },
+    });
 
     this.logger.log(`[${curr.toUpperCase()}] ${monitor.url} — ${result.responseTimeMs}ms`);
   }

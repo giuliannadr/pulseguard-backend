@@ -12,12 +12,13 @@ const github_controller_1 = require("./github.controller");
 const github_service_1 = require("./github.service");
 const prisma_module_1 = require("../prisma/prisma.module");
 const ai_module_1 = require("../ai/ai.module");
+const notification_module_1 = require("../notifications/notification.module");
 let GithubModule = class GithubModule {
 };
 exports.GithubModule = GithubModule;
 exports.GithubModule = GithubModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule, ai_module_1.AiModule],
+        imports: [prisma_module_1.PrismaModule, ai_module_1.AiModule, notification_module_1.NotificationModule],
         controllers: [github_controller_1.GithubController],
         providers: [github_service_1.GithubService],
         exports: [github_service_1.GithubService],

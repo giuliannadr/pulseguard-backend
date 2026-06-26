@@ -75,7 +75,10 @@ let AiService = AiService_1 = class AiService {
       ${diff}
       `;
             const result = await model.generateContent(prompt);
-            const responseText = result.response.text();
+            let responseText = result.response.text().trim();
+            if (responseText.startsWith('```')) {
+                responseText = responseText.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+            }
             return JSON.parse(responseText);
         }
         catch (error) {

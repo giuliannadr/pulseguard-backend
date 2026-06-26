@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AiService } from '../ai/ai.service';
+import { CheckerService } from '../checker/checker.service';
 import axios from 'axios';
 import * as dns from 'dns';
 import * as tls from 'tls';
@@ -11,11 +12,22 @@ export class PlaygroundService {
   private readonly logger = new Logger(PlaygroundService.name);
   private genAI: GoogleGenerativeAI | null = null;
 
-  constructor(private readonly aiService: AiService) {
+  constructor(
+    private readonly aiService: AiService,
+    private readonly checkerService: CheckerService,
+  ) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (apiKey) {
       this.genAI = new GoogleGenerativeAI(apiKey);
     }
+  }
+
+  private cleanJson(text: string): string {
+    let cleaned = text.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+    }
+    return cleaned;
   }
 
   async auditEndpoint(url: string, method: string, headers: Record<string, string>, body: any) {
@@ -93,7 +105,7 @@ export class PlaygroundService {
         `;
 
         const result = await model.generateContent(prompt);
-        aiAuditReport = JSON.parse(result.response.text());
+        aiAuditReport = JSON.parse(this.cleanJson(result.response.text()));
       } catch (err: any) {
         this.logger.error('Gemini API Audit failed', err);
         aiAuditReport = {
@@ -151,7 +163,7 @@ export class PlaygroundService {
       `;
 
       const result = await model.generateContent(prompt);
-      return JSON.parse(result.response.text());
+      return JSON.parse(this.cleanJson(result.response.text()));
     } catch (e: any) {
       this.logger.error('Failed to audit code with Gemini', e);
       return {
@@ -274,7 +286,7 @@ export class PlaygroundService {
         `;
 
         const result = await model.generateContent(prompt);
-        aiReport = JSON.parse(result.response.text());
+        aiReport = JSON.parse(this.cleanJson(result.response.text()));
       } catch (e: any) {
         this.logger.error('Gemini DNS/SSL analysis failed', e);
       }
@@ -342,11 +354,51 @@ export class PlaygroundService {
       }
     }
 
+    // Build a smart default analysis based on status codes if Gemini is not available or fails
+    const mainResult = results[0];
+    const isRateLimit = attackType === 'rate-limit';
+    
+    let defaultIsVulnerable = 'No';
+    let defaultSeverity = 'None';
+    let defaultDiagnosis = 'No anomalies detected.';
+    let defaultMitigation = 'No immediate action required.';
+
+    if (isRateLimit) {
+      const blocked = results.some(r => r.status === 429);
+      if (!blocked) {
+        defaultIsVulnerable = 'Yes';
+        defaultSeverity = 'Medium';
+        defaultDiagnosis = 'The endpoint did not rate-limit multiple rapid concurrent requests (no HTTP 429 returned).';
+        defaultMitigation = 'Implement rate-limiting middleware (e.g., using express-rate-limit or NestJS Throttler).';
+      } else {
+        defaultDiagnosis = 'Rate limiting successfully blocked rapid concurrent requests.';
+      }
+    } else if (mainResult) {
+      if (mainResult.status === 200) {
+        defaultIsVulnerable = 'Suspected';
+        defaultSeverity = 'Low';
+        defaultDiagnosis = 'The server responded with 200 OK. Standard diagnostics cannot confirm if input parameters are processed securely without deep analysis.';
+        defaultMitigation = 'Perform manual penetration testing to verify input sanitization.';
+      } else if (mainResult.status && mainResult.status >= 500) {
+        defaultIsVulnerable = 'Suspected';
+        defaultSeverity = 'Medium';
+        defaultDiagnosis = `The server responded with HTTP ${mainResult.status} (Internal Server Error), which might indicate unhandled input processing errors.`;
+        defaultMitigation = 'Ensure exceptions are caught and sanitized, and database errors are not exposed.';
+      } else if (mainResult.status && mainResult.status >= 400 && mainResult.status < 500) {
+        defaultIsVulnerable = 'No';
+        defaultDiagnosis = `The server correctly blocked the request with HTTP ${mainResult.status}.`;
+        defaultMitigation = 'Configuration is correct. Keep monitoring.';
+      } else if (mainResult.error) {
+        defaultIsVulnerable = 'No';
+        defaultDiagnosis = `Could not reach target endpoint: ${mainResult.error}`;
+      }
+    }
+
     let aiAnalysis = {
-      isVulnerable: 'Yes',
-      severity: 'High',
-      diagnosis: 'The server answered with 200 OK and allowed database payloads.',
-      mitigation: 'Implement input sanitization and use parameterized ORMs.'
+      isVulnerable: defaultIsVulnerable,
+      severity: defaultSeverity,
+      diagnosis: defaultDiagnosis,
+      mitigation: defaultMitigation
     };
 
     if (this.genAI) {
@@ -387,7 +439,7 @@ export class PlaygroundService {
         `;
 
         const result = await model.generateContent(prompt);
-        aiAnalysis = JSON.parse(result.response.text());
+        aiAnalysis = JSON.parse(this.cleanJson(result.response.text()));
       } catch (e: any) {
         this.logger.error('Gemini attack analysis failed', e);
       }
@@ -400,5 +452,105 @@ export class PlaygroundService {
       results,
       analysis: aiAnalysis
     };
+  }
+
+  async generatePatch(code: string, findings: string, language: string) {
+    if (!this.genAI) {
+      return {
+        patch: '',
+        explanation: 'AI service not configured.'
+      };
+    }
+
+    try {
+      const model = this.genAI.getGenerativeModel({
+        model: 'gemini-2.5-flash',
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: SchemaType.OBJECT,
+            properties: {
+              patch: { type: SchemaType.STRING, description: 'The complete corrected code block or diff resolving the security findings' },
+              explanation: { type: SchemaType.STRING, description: 'Explanation of what was fixed and why this resolves the issue' }
+            },
+            required: ['patch', 'explanation']
+          }
+        }
+      });
+
+      const prompt = `
+      You are a senior DevSecOps engineer. Review the following code snippet, which contains security vulnerabilities/findings.
+      
+      Language/Context: ${language}
+      Vulnerabilities/Findings: ${findings}
+
+      Original Code:
+      ${code}
+
+      Generate a clean, secure patch to fix the findings. Return a JSON containing the corrected code ("patch") and a brief explanation of the security fixes ("explanation").
+      `;
+
+      const result = await model.generateContent(prompt);
+      return JSON.parse(this.cleanJson(result.response.text()));
+    } catch (e: any) {
+      this.logger.error('Failed to generate patch with Gemini', e);
+      return {
+        patch: '// Error generating patch: ' + e.message,
+        explanation: 'Could not generate patch.'
+      };
+    }
+  }
+
+  async getNetworkDiagnostics(url: string) {
+    try {
+      const timings = await this.checkerService.measureConnectionDetail(url);
+      
+      let aiAdvice = 'All networks phases are operational.';
+      if (this.genAI) {
+        try {
+          const model = this.genAI.getGenerativeModel({
+            model: 'gemini-2.5-flash',
+            generationConfig: {
+              responseMimeType: 'application/json',
+              responseSchema: {
+                type: SchemaType.OBJECT,
+                properties: {
+                  advice: { type: SchemaType.STRING, description: 'Actionable suggestions to improve network latency or TLS handshake times' }
+                },
+                required: ['advice']
+              }
+            }
+          });
+
+          const prompt = `
+          You are a cloud infrastructure architect. Review the connection timings for this target URL: ${url}
+          - DNS Lookup: ${timings.dnsLookupMs}ms
+          - TCP Connection: ${timings.tcpConnectMs}ms
+          - TLS Handshake: ${timings.tlsHandshakeMs}ms
+          - TTFB (Time to First Byte): ${timings.ttfbMs}ms
+          - Total Latency: ${timings.totalMs}ms
+
+          Provide brief, actionable performance suggestions (e.g. recommend CDN, HTTP/3, Keep-Alive, closer server zones, or DNS providers).
+          `;
+
+          const result = await model.generateContent(prompt);
+          const parsed = JSON.parse(this.cleanJson(result.response.text()));
+          aiAdvice = parsed.advice;
+        } catch (err) {
+          this.logger.error('Gemini network diagnostics advice failed', err);
+        }
+      }
+
+      return {
+        success: true,
+        timings,
+        advice: aiAdvice
+      };
+    } catch (e: any) {
+      return {
+        success: false,
+        error: e.message || 'Failed to diagnostic URL'
+      };
+    }
   }
 }

@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiService } from '../ai/ai.service';
+import { NotificationService } from '../notifications/notification.service';
 import axios from 'axios';
 
 @Injectable()
@@ -15,6 +16,7 @@ export class GithubService {
   constructor(
     private prisma: PrismaService,
     private aiService: AiService,
+    private notifications: NotificationService,
   ) {}
 
   async getUserRepos(token: string) {
@@ -170,6 +172,20 @@ export class GithubService {
           },
         });
         savedIncidents.push(incident);
+
+        // Notify
+        const monitor = await this.prisma.monitor.findUnique({ where: { id: monitorId } });
+        if (monitor) {
+          await this.notifications.sendSecurityAlert(
+            monitor.notificationWebhookUrl,
+            monitor.name,
+            commitHash,
+            analysis.riskType,
+            analysis.severity,
+            analysis.description,
+            monitor.notificationEmail,
+          );
+        }
       }
 
       return { success: true, count: savedIncidents.length };
@@ -228,6 +244,16 @@ export class GithubService {
             recommendation: analysis.recommendation,
           },
         });
+
+        await this.notifications.sendSecurityAlert(
+          monitor.notificationWebhookUrl,
+          monitor.name,
+          commit.id,
+          analysis.riskType,
+          analysis.severity,
+          analysis.description,
+          monitor.notificationEmail,
+        );
       }
     }
   }

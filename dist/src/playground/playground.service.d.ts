@@ -1,9 +1,12 @@
 import { AiService } from '../ai/ai.service';
+import { CheckerService } from '../checker/checker.service';
 export declare class PlaygroundService {
     private readonly aiService;
+    private readonly checkerService;
     private readonly logger;
     private genAI;
-    constructor(aiService: AiService);
+    constructor(aiService: AiService, checkerService: CheckerService);
+    private cleanJson;
     auditEndpoint(url: string, method: string, headers: Record<string, string>, body: any): Promise<{
         status: number;
         responseHeaders: Record<string, string>;
@@ -39,5 +42,23 @@ export declare class PlaygroundService {
             diagnosis: string;
             mitigation: string;
         };
+    }>;
+    generatePatch(code: string, findings: string, language: string): Promise<any>;
+    getNetworkDiagnostics(url: string): Promise<{
+        success: boolean;
+        timings: {
+            dnsLookupMs: number;
+            tcpConnectMs: number;
+            tlsHandshakeMs: number;
+            ttfbMs: number;
+            totalMs: number;
+        };
+        advice: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        timings?: undefined;
+        advice?: undefined;
     }>;
 }

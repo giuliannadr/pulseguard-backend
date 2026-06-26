@@ -11,12 +11,13 @@ const common_1 = require("@nestjs/common");
 const playground_controller_1 = require("./playground.controller");
 const playground_service_1 = require("./playground.service");
 const ai_module_1 = require("../ai/ai.module");
+const checker_module_1 = require("../checker/checker.module");
 let PlaygroundModule = class PlaygroundModule {
 };
 exports.PlaygroundModule = PlaygroundModule;
 exports.PlaygroundModule = PlaygroundModule = __decorate([
     (0, common_1.Module)({
-        imports: [ai_module_1.AiModule],
+        imports: [ai_module_1.AiModule, checker_module_1.CheckerModule],
         controllers: [playground_controller_1.PlaygroundController],
         providers: [playground_service_1.PlaygroundService],
     })

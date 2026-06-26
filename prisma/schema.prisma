@@ -21,6 +21,8 @@ model Monitor {
   notificationEmail        String?  @map("notification_email")
   maintenanceWindows       Json?    @map("maintenance_windows")
   lastStatus               String?  @map("last_status")
+  securityGrade            String?  @map("security_grade")
+  securityHeaders          Json?    @map("security_headers")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -56,6 +58,8 @@ model Check {
   responseTimeMs Int?     @map("response_time_ms")
   sslDaysLeft    Int?     @map("ssl_days_left")
   errorMessage   String?  @map("error_message")
+  securityGrade  String?  @map("security_grade")
+  securityHeaders Json?    @map("security_headers")
   checkedAt      DateTime @default(now()) @map("checked_at")
 
   monitor Monitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)

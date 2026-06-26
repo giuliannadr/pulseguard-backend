@@ -35,4 +35,14 @@ export class PlaygroundController {
   simulateAttack(@Body() body: { url: string; attackType: string }) {
     return this.service.simulateAttack(body.url, body.attackType);
   }
+
+  @Post('generate-patch')
+  generatePatch(@Body() body: { code: string; findings: string; language: string }) {
+    return this.service.generatePatch(body.code, body.findings, body.language || 'javascript');
+  }
+
+  @Post('network-diagnostic')
+  networkDiagnostic(@Body() body: { url: string }) {
+    return this.service.getNetworkDiagnostics(body.url);
+  }
 }

@@ -11,12 +11,16 @@ export declare class MonitorsController {
             responseTimeMs: number | null;
             sslDaysLeft: number | null;
             errorMessage: string | null;
+            securityGrade: string | null;
+            securityHeaders: import("@prisma/client/runtime/client").JsonValue | null;
             id: string;
             monitorId: string;
             checkedAt: Date;
         }[];
     } & {
         url: string | null;
+        securityGrade: string | null;
+        securityHeaders: import("@prisma/client/runtime/client").JsonValue | null;
         name: string;
         expectedStatus: number;
         expectedText: string | null;
@@ -35,6 +39,8 @@ export declare class MonitorsController {
     })[]>;
     findOne(id: string, req: any): Promise<{
         url: string | null;
+        securityGrade: string | null;
+        securityHeaders: import("@prisma/client/runtime/client").JsonValue | null;
         name: string;
         expectedStatus: number;
         expectedText: string | null;
@@ -53,6 +59,8 @@ export declare class MonitorsController {
     }>;
     create(dto: CreateMonitorDto, req: any): import("@prisma/client").Prisma.Prisma__MonitorClient<{
         url: string | null;
+        securityGrade: string | null;
+        securityHeaders: import("@prisma/client/runtime/client").JsonValue | null;
         name: string;
         expectedStatus: number;
         expectedText: string | null;
@@ -73,6 +81,8 @@ export declare class MonitorsController {
     }>;
     update(id: string, dto: UpdateMonitorDto, req: any): Promise<{
         url: string | null;
+        securityGrade: string | null;
+        securityHeaders: import("@prisma/client/runtime/client").JsonValue | null;
         name: string;
         expectedStatus: number;
         expectedText: string | null;
@@ -91,6 +101,8 @@ export declare class MonitorsController {
     }>;
     remove(id: string, req: any): Promise<{
         url: string | null;
+        securityGrade: string | null;
+        securityHeaders: import("@prisma/client/runtime/client").JsonValue | null;
         name: string;
         expectedStatus: number;
         expectedText: string | null;
@@ -113,6 +125,8 @@ export declare class MonitorsController {
         responseTimeMs: number | null;
         sslDaysLeft: number | null;
         errorMessage: string | null;
+        securityGrade: string | null;
+        securityHeaders: import("@prisma/client/runtime/client").JsonValue | null;
         id: string;
         monitorId: string;
         checkedAt: Date;
@@ -132,6 +146,8 @@ export declare class MonitorsController {
         responseTimeMs: number | null;
         sslDaysLeft: number | null;
         errorMessage: string | null;
+        securityGrade: string | null;
+        securityHeaders: import("@prisma/client/runtime/client").JsonValue | null;
         id: string;
         monitorId: string;
         checkedAt: Date;

@@ -73,9 +73,14 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
         if (wentDown || recovered) {
             this.notifications.send(monitor.notificationWebhookUrl, monitor.name, monitor.url, wentDown ? 'down' : 'up', wentDown ? (result.errorMessage ?? undefined) : undefined, monitor.notificationEmail);
         }
-        if (prev !== curr) {
-            await this.prisma.monitor.update({ where: { id: monitor.id }, data: { lastStatus: curr } });
-        }
+        await this.prisma.monitor.update({
+            where: { id: monitor.id },
+            data: {
+                lastStatus: curr,
+                securityGrade: result.securityGrade,
+                securityHeaders: result.securityHeaders ?? undefined,
+            },
+        });
         this.logger.log(`[${curr.toUpperCase()}] ${monitor.url} — ${result.responseTimeMs}ms`);
     }
 };

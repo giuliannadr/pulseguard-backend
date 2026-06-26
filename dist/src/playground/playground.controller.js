@@ -34,6 +34,12 @@ let PlaygroundController = class PlaygroundController {
     simulateAttack(body) {
         return this.service.simulateAttack(body.url, body.attackType);
     }
+    generatePatch(body) {
+        return this.service.generatePatch(body.code, body.findings, body.language || 'javascript');
+    }
+    networkDiagnostic(body) {
+        return this.service.getNetworkDiagnostics(body.url);
+    }
 };
 exports.PlaygroundController = PlaygroundController;
 __decorate([
@@ -64,6 +70,20 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], PlaygroundController.prototype, "simulateAttack", null);
+__decorate([
+    (0, common_1.Post)('generate-patch'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], PlaygroundController.prototype, "generatePatch", null);
+__decorate([
+    (0, common_1.Post)('network-diagnostic'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], PlaygroundController.prototype, "networkDiagnostic", null);
 exports.PlaygroundController = PlaygroundController = __decorate([
     (0, common_1.UseGuards)(supabase_auth_guard_1.SupabaseAuthGuard, throttler_1.ThrottlerGuard),
     (0, throttler_1.Throttle)({ default: { ttl: 60_000, limit: 10 } }),

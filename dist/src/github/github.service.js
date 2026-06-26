@@ -17,15 +17,18 @@ exports.GithubService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const ai_service_1 = require("../ai/ai.service");
+const notification_service_1 = require("../notifications/notification.service");
 const axios_1 = __importDefault(require("axios"));
 let GithubService = GithubService_1 = class GithubService {
     prisma;
     aiService;
+    notifications;
     logger = new common_1.Logger(GithubService_1.name);
     WEBHOOK_URL = `${process.env.API_URL ?? 'https://pulseguard-backend-production.up.railway.app/api'}/github/webhook`;
-    constructor(prisma, aiService) {
+    constructor(prisma, aiService, notifications) {
         this.prisma = prisma;
         this.aiService = aiService;
+        this.notifications = notifications;
     }
     async getUserRepos(token) {
         try {
@@ -135,6 +138,10 @@ let GithubService = GithubService_1 = class GithubService {
                     },
                 });
                 savedIncidents.push(incident);
+                const monitor = await this.prisma.monitor.findUnique({ where: { id: monitorId } });
+                if (monitor) {
+                    await this.notifications.sendSecurityAlert(monitor.notificationWebhookUrl, monitor.name, commitHash, analysis.riskType, analysis.severity, analysis.description, monitor.notificationEmail);
+                }
             }
             return { success: true, count: savedIncidents.length };
         }
@@ -179,6 +186,7 @@ let GithubService = GithubService_1 = class GithubService {
                         recommendation: analysis.recommendation,
                     },
                 });
+                await this.notifications.sendSecurityAlert(monitor.notificationWebhookUrl, monitor.name, commit.id, analysis.riskType, analysis.severity, analysis.description, monitor.notificationEmail);
             }
         }
     }
@@ -187,6 +195,7 @@ exports.GithubService = GithubService;
 exports.GithubService = GithubService = GithubService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        ai_service_1.AiService])
+        ai_service_1.AiService,
+        notification_service_1.NotificationService])
 ], GithubService);
 //# sourceMappingURL=github.service.js.map
