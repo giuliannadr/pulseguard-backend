@@ -19,6 +19,7 @@ class CreateMonitorDto {
     intervalMinutes = 5;
     notificationWebhookUrl;
     notificationEmail;
+    maintenanceWindows;
 }
 exports.CreateMonitorDto = CreateMonitorDto;
 __decorate([
@@ -60,4 +61,9 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], CreateMonitorDto.prototype, "notificationEmail", void 0);
+__decorate([
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Array)
+], CreateMonitorDto.prototype, "maintenanceWindows", void 0);
 //# sourceMappingURL=create-monitor.dto.js.map

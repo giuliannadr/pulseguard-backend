@@ -6,4 +6,5 @@ export declare class CreateMonitorDto {
     intervalMinutes?: number;
     notificationWebhookUrl?: string;
     notificationEmail?: string;
+    maintenanceWindows?: any[];
 }

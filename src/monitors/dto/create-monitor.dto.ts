@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsString,
   IsUrl,
+  IsArray,
   Max,
   Min,
 } from 'class-validator';
@@ -41,4 +42,8 @@ export class CreateMonitorDto {
   @IsEmail()
   @IsOptional()
   notificationEmail?: string;
+
+  @IsArray()
+  @IsOptional()
+  maintenanceWindows?: any[];
 }
