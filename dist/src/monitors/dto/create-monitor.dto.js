@@ -17,6 +17,7 @@ class CreateMonitorDto {
     expectedStatus = 200;
     expectedText;
     intervalMinutes = 5;
+    notificationWebhookUrl;
 }
 exports.CreateMonitorDto = CreateMonitorDto;
 __decorate([
@@ -48,4 +49,9 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Number)
 ], CreateMonitorDto.prototype, "intervalMinutes", void 0);
+__decorate([
+    (0, class_validator_1.IsUrl)({ require_tld: false }),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateMonitorDto.prototype, "notificationWebhookUrl", void 0);
 //# sourceMappingURL=create-monitor.dto.js.map

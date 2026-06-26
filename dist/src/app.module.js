@@ -11,6 +11,7 @@ const common_1 = require("@nestjs/common");
 const health_controller_1 = require("./health.controller");
 const config_1 = require("@nestjs/config");
 const schedule_1 = require("@nestjs/schedule");
+const throttler_1 = require("@nestjs/throttler");
 const prisma_module_1 = require("./prisma/prisma.module");
 const monitors_module_1 = require("./monitors/monitors.module");
 const checker_module_1 = require("./checker/checker.module");
@@ -18,6 +19,7 @@ const scheduler_module_1 = require("./scheduler/scheduler.module");
 const github_module_1 = require("./github/github.module");
 const ai_module_1 = require("./ai/ai.module");
 const playground_module_1 = require("./playground/playground.module");
+const notification_module_1 = require("./notifications/notification.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -27,6 +29,7 @@ exports.AppModule = AppModule = __decorate([
         imports: [
             config_1.ConfigModule.forRoot({ isGlobal: true }),
             schedule_1.ScheduleModule.forRoot(),
+            throttler_1.ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 20 }]),
             prisma_module_1.PrismaModule,
             checker_module_1.CheckerModule,
             monitors_module_1.MonitorsModule,
@@ -34,6 +37,7 @@ exports.AppModule = AppModule = __decorate([
             github_module_1.GithubModule,
             ai_module_1.AiModule,
             playground_module_1.PlaygroundModule,
+            notification_module_1.NotificationModule,
         ],
     })
 ], AppModule);

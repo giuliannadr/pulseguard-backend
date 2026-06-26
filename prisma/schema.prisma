@@ -15,8 +15,10 @@ model Monitor {
   expectedText    String?  @map("expected_text")
   intervalMinutes Int      @default(5) @map("interval_minutes")
   isActive        Boolean  @default(true) @map("is_active")
-  githubRepoUrl   String?  @map("github_repo_url")
-  githubWebhookId String?  @map("github_webhook_id")
+  githubRepoUrl            String?  @map("github_repo_url")
+  githubWebhookId          String?  @map("github_webhook_id")
+  notificationWebhookUrl   String?  @map("notification_webhook_url")
+  lastStatus               String?  @map("last_status")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 

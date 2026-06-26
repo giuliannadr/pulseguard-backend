@@ -15,13 +15,16 @@ const common_1 = require("@nestjs/common");
 const schedule_1 = require("@nestjs/schedule");
 const prisma_service_1 = require("../prisma/prisma.service");
 const checker_service_1 = require("../checker/checker.service");
+const notification_service_1 = require("../notifications/notification.service");
 let SchedulerService = SchedulerService_1 = class SchedulerService {
     prisma;
     checker;
+    notifications;
     logger = new common_1.Logger(SchedulerService_1.name);
-    constructor(prisma, checker) {
+    constructor(prisma, checker, notifications) {
         this.prisma = prisma;
         this.checker = checker;
+        this.notifications = notifications;
     }
     async runScheduledChecks() {
         const monitors = await this.prisma.monitor.findMany({
@@ -37,18 +40,36 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
                 ? (now.getTime() - lastCheck.checkedAt.getTime()) / 60_000
                 : Infinity;
             if (minutesSinceLast >= monitor.intervalMinutes) {
-                this.runCheck(monitor).catch((err) => this.logger.error(`Check failed for ${monitor.url}: ${err.message}`));
+                this.runCheck(monitor, lastCheck?.status ?? null).catch((err) => this.logger.error(`Check failed for ${monitor.url}: ${err.message}`));
             }
         }
     }
-    async runCheck(monitor) {
+    async runCheck(monitor, previousStatus) {
         if (!monitor.url)
             return;
         const result = await this.checker.checkUrl(monitor.url, monitor.expectedStatus, monitor.expectedText);
         await this.prisma.check.create({
             data: { monitorId: monitor.id, ...result },
         });
-        this.logger.log(`[${result.status.toUpperCase()}] ${monitor.url} — ${result.responseTimeMs}ms`);
+        const prev = previousStatus ?? monitor.lastStatus;
+        const curr = result.status;
+        if (monitor.notificationWebhookUrl) {
+            const wentDown = curr === 'down' && prev !== 'down';
+            const recovered = (curr === 'up' || curr === 'degraded') && prev === 'down';
+            if (wentDown) {
+                this.notifications.send(monitor.notificationWebhookUrl, monitor.name, monitor.url, 'down', result.errorMessage ?? undefined);
+            }
+            else if (recovered) {
+                this.notifications.send(monitor.notificationWebhookUrl, monitor.name, monitor.url, 'up');
+            }
+        }
+        if (prev !== curr) {
+            await this.prisma.monitor.update({
+                where: { id: monitor.id },
+                data: { lastStatus: curr },
+            });
+        }
+        this.logger.log(`[${curr.toUpperCase()}] ${monitor.url} — ${result.responseTimeMs}ms`);
     }
 };
 exports.SchedulerService = SchedulerService;
@@ -61,6 +82,7 @@ __decorate([
 exports.SchedulerService = SchedulerService = SchedulerService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        checker_service_1.CheckerService])
+        checker_service_1.CheckerService,
+        notification_service_1.NotificationService])
 ], SchedulerService);
 //# sourceMappingURL=scheduler.service.js.map

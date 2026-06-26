@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { CheckerService } from '../checker/checker.service';
+import { NotificationService } from '../notifications/notification.service';
 
 @Injectable()
 export class SchedulerService {
@@ -10,11 +11,11 @@ export class SchedulerService {
   constructor(
     private prisma: PrismaService,
     private checker: CheckerService,
+    private notifications: NotificationService,
   ) {}
 
   @Cron(CronExpression.EVERY_MINUTE)
   async runScheduledChecks() {
-    // Only schedule URL-based monitors (repo-only monitors have no URL to check)
     const monitors = await this.prisma.monitor.findMany({
       where: { isActive: true, NOT: { url: null } },
     });
@@ -32,19 +33,25 @@ export class SchedulerService {
         : Infinity;
 
       if (minutesSinceLast >= monitor.intervalMinutes) {
-        this.runCheck(monitor).catch((err) =>
+        this.runCheck(monitor, lastCheck?.status ?? null).catch((err) =>
           this.logger.error(`Check failed for ${monitor.url}: ${err.message}`),
         );
       }
     }
   }
 
-  private async runCheck(monitor: {
-    id: string;
-    url: string | null;
-    expectedStatus: number;
-    expectedText: string | null;
-  }) {
+  private async runCheck(
+    monitor: {
+      id: string;
+      name: string;
+      url: string | null;
+      expectedStatus: number;
+      expectedText: string | null;
+      notificationWebhookUrl: string | null;
+      lastStatus: string | null;
+    },
+    previousStatus: string | null,
+  ) {
     if (!monitor.url) return;
 
     const result = await this.checker.checkUrl(
@@ -57,8 +64,40 @@ export class SchedulerService {
       data: { monitorId: monitor.id, ...result },
     });
 
-    this.logger.log(
-      `[${result.status.toUpperCase()}] ${monitor.url} — ${result.responseTimeMs}ms`,
-    );
+    // Detect status transitions and send notifications
+    const prev = previousStatus ?? monitor.lastStatus;
+    const curr = result.status;
+
+    if (monitor.notificationWebhookUrl) {
+      const wentDown = curr === 'down' && prev !== 'down';
+      const recovered = (curr === 'up' || curr === 'degraded') && prev === 'down';
+
+      if (wentDown) {
+        this.notifications.send(
+          monitor.notificationWebhookUrl,
+          monitor.name,
+          monitor.url,
+          'down',
+          result.errorMessage ?? undefined,
+        );
+      } else if (recovered) {
+        this.notifications.send(
+          monitor.notificationWebhookUrl,
+          monitor.name,
+          monitor.url,
+          'up',
+        );
+      }
+    }
+
+    // Persist last known status
+    if (prev !== curr) {
+      await this.prisma.monitor.update({
+        where: { id: monitor.id },
+        data: { lastStatus: curr },
+      });
+    }
+
+    this.logger.log(`[${curr.toUpperCase()}] ${monitor.url} — ${result.responseTimeMs}ms`);
   }
 }

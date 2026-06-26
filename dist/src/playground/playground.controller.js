@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PlaygroundController = void 0;
 const common_1 = require("@nestjs/common");
+const throttler_1 = require("@nestjs/throttler");
 const supabase_auth_guard_1 = require("../auth/supabase-auth.guard");
 const playground_service_1 = require("./playground.service");
 let PlaygroundController = class PlaygroundController {
@@ -64,7 +65,8 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], PlaygroundController.prototype, "simulateAttack", null);
 exports.PlaygroundController = PlaygroundController = __decorate([
-    (0, common_1.UseGuards)(supabase_auth_guard_1.SupabaseAuthGuard),
+    (0, common_1.UseGuards)(supabase_auth_guard_1.SupabaseAuthGuard, throttler_1.ThrottlerGuard),
+    (0, throttler_1.Throttle)({ default: { ttl: 60_000, limit: 10 } }),
     (0, common_1.Controller)('playground'),
     __metadata("design:paramtypes", [playground_service_1.PlaygroundService])
 ], PlaygroundController);

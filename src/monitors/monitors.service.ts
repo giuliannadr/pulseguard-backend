@@ -43,6 +43,7 @@ export class MonitorsService {
         expectedStatus: dto.expectedStatus ?? 200,
         expectedText: dto.expectedText,
         intervalMinutes: dto.intervalMinutes ?? 5,
+        notificationWebhookUrl: dto.notificationWebhookUrl ?? null,
       },
     });
   }

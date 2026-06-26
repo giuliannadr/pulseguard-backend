@@ -32,4 +32,8 @@ export class CreateMonitorDto {
   @Max(60)
   @IsOptional()
   intervalMinutes?: number = 5;
+
+  @IsUrl({ require_tld: false })
+  @IsOptional()
+  notificationWebhookUrl?: string;
 }

@@ -1,8 +1,10 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { PlaygroundService } from './playground.service';
 
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SupabaseAuthGuard, ThrottlerGuard)
+@Throttle({ default: { ttl: 60_000, limit: 10 } })
 @Controller('playground')
 export class PlaygroundController {
   constructor(private readonly service: PlaygroundService) {}
