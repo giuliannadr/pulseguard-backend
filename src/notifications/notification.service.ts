@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
+import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class NotificationService {
@@ -89,8 +90,18 @@ export class NotificationService {
     title: string,
     details?: string,
   ) {
-    const resendKey = process.env.RESEND_API_KEY;
-    if (!resendKey) { this.logger.warn('RESEND_API_KEY not set — email notifications disabled'); return; }
+    const gmailUser = process.env.GMAIL_USER;
+    const gmailPass = process.env.GMAIL_APP_PASSWORD;
+
+    if (!gmailUser || !gmailPass) {
+      this.logger.warn('GMAIL_USER or GMAIL_APP_PASSWORD not set — email notifications disabled');
+      return;
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: gmailUser, pass: gmailPass },
+    });
 
     const color = isRecovery ? '#00E676' : '#FF1744';
     const urlRow = monitorUrl ? `<tr><td style="color:#888;padding:4px 0">URL</td><td>${monitorUrl}</td></tr>` : '';
@@ -110,14 +121,11 @@ export class NotificationService {
 </div>`;
 
     try {
-      await axios.post('https://api.resend.com/emails', {
-        from: 'PulseGuard <alerts@pulseguard.app>',
+      await transporter.sendMail({
+        from: `PulseGuard <${gmailUser}>`,
         to,
         subject: `[PulseGuard] ${title}`,
         html,
-      }, {
-        headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-        timeout: 8000,
       });
       this.logger.log(`Email sent to ${to} for ${monitorName}`);
     } catch (err: any) {
