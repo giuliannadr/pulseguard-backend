@@ -6,6 +6,10 @@ export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
 
   async send(webhookUrl: string, monitorName: string, monitorUrl: string | null, status: 'down' | 'up', details?: string) {
+    try { new URL(webhookUrl); } catch {
+      this.logger.warn(`Invalid webhook URL for ${monitorName}: ${webhookUrl}`);
+      return;
+    }
     const isRecovery = status === 'up';
     const isDiscord = webhookUrl.includes('discord.com/api/webhooks');
     const isSlack = webhookUrl.includes('hooks.slack.com');

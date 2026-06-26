@@ -53,7 +53,7 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
         });
         const prev = previousStatus ?? monitor.lastStatus;
         const curr = result.status;
-        if (monitor.notificationWebhookUrl) {
+        if (monitor.notificationWebhookUrl?.trim()) {
             const wentDown = curr === 'down' && prev !== 'down';
             const recovered = (curr === 'up' || curr === 'degraded') && prev === 'down';
             if (wentDown) {

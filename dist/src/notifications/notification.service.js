@@ -16,6 +16,13 @@ const axios_1 = __importDefault(require("axios"));
 let NotificationService = NotificationService_1 = class NotificationService {
     logger = new common_1.Logger(NotificationService_1.name);
     async send(webhookUrl, monitorName, monitorUrl, status, details) {
+        try {
+            new URL(webhookUrl);
+        }
+        catch {
+            this.logger.warn(`Invalid webhook URL for ${monitorName}: ${webhookUrl}`);
+            return;
+        }
         const isRecovery = status === 'up';
         const isDiscord = webhookUrl.includes('discord.com/api/webhooks');
         const isSlack = webhookUrl.includes('hooks.slack.com');
