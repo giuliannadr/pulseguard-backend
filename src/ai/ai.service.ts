@@ -71,12 +71,13 @@ export class AiService {
       });
 
       const prompt = `
-      You are an expert DevSecOps and SRE engineer. 
-      Analyze the following git commit diff and identify any potential security vulnerabilities, critical bugs, or performance regressions that could cause an API to fail or expose data.
-      
-      If the code looks completely safe, set severity to 'None', riskType to 'None', and provide a brief description saying it looks good.
+      Sos un ingeniero experto en DevSecOps y SRE. Analizá el siguiente diff de commit de Git. Responde SIEMPRE en español.
+      Identificá vulnerabilidades de seguridad, bugs críticos o regresiones de performance que puedan causar fallas o exponer datos.
 
-      Commit Diff:
+      Si el código es seguro, ponés severity 'None', riskType 'None' y una descripción corta diciendo que se ve bien.
+      Sé conciso: la descripción en máximo 2 oraciones, la recomendación en máximo 1 oración accionable.
+
+      Diff del commit:
       ${diff}
       `;
 
