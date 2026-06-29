@@ -13,13 +13,17 @@ import {
 } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { MonitorsService } from './monitors.service';
+import { NotificationService } from '../notifications/notification.service';
 import { CreateMonitorDto } from './dto/create-monitor.dto';
 import { UpdateMonitorDto } from './dto/update-monitor.dto';
 
 @UseGuards(SupabaseAuthGuard)
 @Controller('monitors')
 export class MonitorsController {
-  constructor(private readonly service: MonitorsService) {}
+  constructor(
+    private readonly service: MonitorsService,
+    private readonly notifications: NotificationService,
+  ) {}
 
   @Get()
   findAll(@Request() req: any) {
@@ -81,6 +85,23 @@ export class MonitorsController {
   @Get(':id/downtime')
   getDowntimeHistory(@Param('id') id: string, @Request() req: any) {
     return this.service.getDowntimeHistory(id, req.user.id);
+  }
+
+  @Post(':id/test-email')
+  async testEmail(@Param('id') id: string, @Request() req: any) {
+    const monitor = await this.service.findOne(id, req.user.id);
+    if (!monitor.notificationEmail) {
+      return { ok: false, message: 'No hay email de notificación configurado en este monitor.' };
+    }
+    await this.notifications.send(
+      null,
+      monitor.name,
+      monitor.url,
+      'down',
+      'Este es un email de prueba enviado desde PulseGuard.',
+      monitor.notificationEmail,
+    );
+    return { ok: true, message: `Email de prueba enviado a ${monitor.notificationEmail}` };
   }
 
   @Post(':id/scan-repo')

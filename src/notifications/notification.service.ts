@@ -1,10 +1,29 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import axios from 'axios';
 import * as nodemailer from 'nodemailer';
+import { Transporter } from 'nodemailer';
 
 @Injectable()
-export class NotificationService {
+export class NotificationService implements OnModuleInit {
   private readonly logger = new Logger(NotificationService.name);
+  private transporter: Transporter | null = null;
+  private fromAddress = 'PulseGuard <noreply@pulseguard.dev>';
+
+  async onModuleInit() {
+    try {
+      const testAccount = await nodemailer.createTestAccount();
+      this.transporter = nodemailer.createTransport({
+        host: 'smtp.ethereal.email',
+        port: 587,
+        secure: false,
+        auth: { user: testAccount.user, pass: testAccount.pass },
+      });
+      this.fromAddress = `PulseGuard <${testAccount.user}>`;
+      this.logger.log(`Ethereal SMTP ready — preview emails at https://ethereal.email/messages (user: ${testAccount.user})`);
+    } catch (err: any) {
+      this.logger.warn(`Could not create Ethereal test account: ${err.message} — email notifications disabled`);
+    }
+  }
 
   async send(
     webhookUrl: string | null,
@@ -16,7 +35,7 @@ export class NotificationService {
   ) {
     const isRecovery = status === 'up';
     const emoji = isRecovery ? '✅' : '🔴';
-    const title = isRecovery ? `${monitorName} is back online` : `${monitorName} is DOWN`;
+    const title = isRecovery ? `${monitorName} volvió en línea` : `${monitorName} está CAÍDO`;
 
     await Promise.all([
       webhookUrl?.trim() ? this.sendWebhook(webhookUrl, monitorName, monitorUrl, isRecovery, emoji, title, details) : Promise.resolve(),
@@ -49,7 +68,7 @@ export class NotificationService {
       payload = {
         embeds: [{
           title: `${emoji} ${title}`,
-          description: `PulseGuard detected a status change.${urlLine}${detailsLine}`,
+          description: `PulseGuard detectó un cambio de estado.${urlLine}${detailsLine}`,
           color,
           timestamp: new Date().toISOString(),
           footer: { text: 'PulseGuard Monitor' },
@@ -76,9 +95,9 @@ export class NotificationService {
 
     try {
       await axios.post(webhookUrl, payload, { timeout: 5000 });
-      this.logger.log(`Webhook sent for ${monitorName} (${isRecovery ? 'up' : 'down'})`);
+      this.logger.log(`Webhook enviado para ${monitorName} (${isRecovery ? 'up' : 'down'})`);
     } catch (err: any) {
-      this.logger.warn(`Webhook failed for ${monitorName}: ${err.message}`);
+      this.logger.warn(`Webhook falló para ${monitorName}: ${err.message}`);
     }
   }
 
@@ -90,46 +109,42 @@ export class NotificationService {
     title: string,
     details?: string,
   ) {
-    const gmailUser = process.env.GMAIL_USER;
-    const gmailPass = process.env.GMAIL_APP_PASSWORD;
-
-    if (!gmailUser || !gmailPass) {
-      this.logger.warn('GMAIL_USER or GMAIL_APP_PASSWORD not set — email notifications disabled');
+    if (!this.transporter) {
+      this.logger.warn('Email transport no disponible — omitiendo notificación por email');
       return;
     }
 
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: gmailUser, pass: gmailPass },
-    });
-
     const color = isRecovery ? '#00E676' : '#FF1744';
-    const urlRow = monitorUrl ? `<tr><td style="color:#888;padding:4px 0">URL</td><td>${monitorUrl}</td></tr>` : '';
+    const urlRow = monitorUrl ? `<tr><td style="color:#888;padding:4px 0">URL</td><td><a href="${monitorUrl}" style="color:#CAFF00">${monitorUrl}</a></td></tr>` : '';
     const errorRow = details ? `<tr><td style="color:#888;padding:4px 0">Error</td><td style="color:#FF1744">${details}</td></tr>` : '';
 
     const html = `
 <div style="background:#0A0A0A;color:#F0F0F0;font-family:monospace;padding:32px;border-radius:6px;max-width:520px">
-  <div style="font-size:11px;color:#CAFF00;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">// PulseGuard</div>
+  <div style="font-size:11px;color:#CAFF00;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">// PulseGuard Alertas</div>
   <h2 style="margin:0 0 24px;font-size:22px;color:${color}">${title}</h2>
   <table style="border-collapse:collapse;font-size:13px;width:100%">
     <tr><td style="color:#888;padding:4px 0;width:80px">Monitor</td><td>${monitorName}</td></tr>
-    <tr><td style="color:#888;padding:4px 0">Status</td><td style="color:${color}">${isRecovery ? '✅ Back online' : '🔴 Down'}</td></tr>
+    <tr><td style="color:#888;padding:4px 0">Estado</td><td style="color:${color}">${isRecovery ? '✅ En línea' : '🔴 Caído'}</td></tr>
     ${urlRow}${errorRow}
-    <tr><td style="color:#888;padding:4px 0">Time</td><td>${new Date().toLocaleString()}</td></tr>
+    <tr><td style="color:#888;padding:4px 0">Hora</td><td>${new Date().toLocaleString('es-AR')}</td></tr>
   </table>
-  <div style="margin-top:24px;font-size:11px;color:#4A4A4A">Sent by PulseGuard · Manage alerts in your dashboard</div>
+  <div style="margin-top:24px;font-size:11px;color:#4A4A4A">Enviado por PulseGuard · Gestioná tus alertas desde el dashboard</div>
 </div>`;
 
     try {
-      await transporter.sendMail({
-        from: `PulseGuard <${gmailUser}>`,
+      const info = await this.transporter.sendMail({
+        from: this.fromAddress,
         to,
         subject: `[PulseGuard] ${title}`,
         html,
       });
-      this.logger.log(`Email sent to ${to} for ${monitorName}`);
+      const previewUrl = nodemailer.getTestMessageUrl(info);
+      this.logger.log(`Email enviado a ${to} para ${monitorName}`);
+      if (previewUrl) {
+        this.logger.log(`Vista previa del email: ${previewUrl}`);
+      }
     } catch (err: any) {
-      this.logger.warn(`Email failed for ${monitorName}: ${err.message}`);
+      this.logger.warn(`Email falló para ${monitorName}: ${err.message}`);
     }
   }
 
@@ -142,7 +157,7 @@ export class NotificationService {
     description: string,
     email?: string | null,
   ) {
-    const title = `⚠️ [${severity.toUpperCase()} RISK] Security Incident in ${monitorName}`;
+    const title = `⚠️ [${severity.toUpperCase()} RISK] Incidente de seguridad en ${monitorName}`;
     const emoji = '🛡️';
 
     await Promise.all([
@@ -170,7 +185,6 @@ export class NotificationService {
       low: 0x00e676
     };
     const color = colors[severity.toLowerCase()] ?? 0xff1744;
-
     const isDiscord = webhookUrl.includes('discord.com/api/webhooks');
     const isSlack = webhookUrl.includes('hooks.slack.com');
 
@@ -179,7 +193,7 @@ export class NotificationService {
       payload = {
         embeds: [{
           title: `${emoji} ${title}`,
-          description: `PulseGuard AI scanned a new commit push.\n\n**Commit:** \`${commitHash.substring(0, 7)}\`\n**Risk Type:** ${riskType}\n**Description:** ${description}`,
+          description: `PulseGuard AI analizó un nuevo push.\n\n**Commit:** \`${commitHash.substring(0, 7)}\`\n**Tipo de riesgo:** ${riskType}\n**Descripción:** ${description}`,
           color,
           timestamp: new Date().toISOString(),
           footer: { text: 'PulseGuard Security Scanner' },
@@ -190,7 +204,7 @@ export class NotificationService {
         text: `${emoji} *${title}*`,
         blocks: [{
           type: 'section',
-          text: { type: 'mrkdwn', text: `${emoji} *${title}*\n*Commit:* \`${commitHash.substring(0, 7)}\`\n*Risk:* ${riskType}\n*Description:* ${description}` },
+          text: { type: 'mrkdwn', text: `${emoji} *${title}*\n*Commit:* \`${commitHash.substring(0, 7)}\`\n*Riesgo:* ${riskType}\n*Descripción:* ${description}` },
         }],
       };
     } else {
@@ -207,9 +221,9 @@ export class NotificationService {
 
     try {
       await axios.post(webhookUrl, payload, { timeout: 5000 });
-      this.logger.log(`Security webhook sent for ${monitorName}`);
+      this.logger.log(`Security webhook enviado para ${monitorName}`);
     } catch (err: any) {
-      this.logger.warn(`Security webhook failed for ${monitorName}: ${err.message}`);
+      this.logger.warn(`Security webhook falló para ${monitorName}: ${err.message}`);
     }
   }
 
@@ -222,15 +236,10 @@ export class NotificationService {
     description: string,
     title: string,
   ) {
-    const gmailUser = process.env.GMAIL_USER;
-    const gmailPass = process.env.GMAIL_APP_PASSWORD;
-
-    if (!gmailUser || !gmailPass) return;
-
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: gmailUser, pass: gmailPass },
-    });
+    if (!this.transporter) {
+      this.logger.warn('Email transport no disponible — omitiendo notificación de seguridad');
+      return;
+    }
 
     const colors: Record<string, string> = {
       critical: '#FF1744',
@@ -245,25 +254,29 @@ export class NotificationService {
   <div style="font-size:11px;color:#CAFF00;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">// PulseGuard SecOps</div>
   <h2 style="margin:0 0 24px;font-size:20px;color:${color}">${title}</h2>
   <table style="border-collapse:collapse;font-size:13px;width:100%">
-    <tr><td style="color:#888;padding:4px 0;width:100px">Project</td><td>${monitorName}</td></tr>
+    <tr><td style="color:#888;padding:4px 0;width:100px">Proyecto</td><td>${monitorName}</td></tr>
     <tr><td style="color:#888;padding:4px 0">Commit</td><td><code>${commitHash.substring(0, 7)}</code></td></tr>
-    <tr><td style="color:#888;padding:4px 0">Risk Type</td><td style="color:${color};font-weight:bold">${riskType}</td></tr>
-    <tr><td style="color:#888;padding:4px 0">Severity</td><td style="color:${color};font-weight:bold">${severity.toUpperCase()}</td></tr>
-    <tr><td style="color:#888;padding:4px 0;vertical-align:top">Description</td><td>${description}</td></tr>
+    <tr><td style="color:#888;padding:4px 0">Tipo de riesgo</td><td style="color:${color};font-weight:bold">${riskType}</td></tr>
+    <tr><td style="color:#888;padding:4px 0">Severidad</td><td style="color:${color};font-weight:bold">${severity.toUpperCase()}</td></tr>
+    <tr><td style="color:#888;padding:4px 0;vertical-align:top">Descripción</td><td>${description}</td></tr>
   </table>
-  <div style="margin-top:24px;font-size:11px;color:#4A4A4A">Sent by PulseGuard DevSecOps · Check dashboard for mitigations</div>
+  <div style="margin-top:24px;font-size:11px;color:#4A4A4A">Enviado por PulseGuard DevSecOps · Revisá el dashboard para ver las mitigaciones</div>
 </div>`;
 
     try {
-      await transporter.sendMail({
-        from: `PulseGuard DevSecOps <${gmailUser}>`,
+      const info = await this.transporter.sendMail({
+        from: this.fromAddress,
         to,
-        subject: `[PulseGuard Security] ${title}`,
+        subject: `[PulseGuard Seguridad] ${title}`,
         html,
       });
-      this.logger.log(`Security Email sent to ${to}`);
+      const previewUrl = nodemailer.getTestMessageUrl(info);
+      this.logger.log(`Security email enviado a ${to} para ${monitorName}`);
+      if (previewUrl) {
+        this.logger.log(`Vista previa del email de seguridad: ${previewUrl}`);
+      }
     } catch (err: any) {
-      this.logger.warn(`Security Email failed to ${to}: ${err.message}`);
+      this.logger.warn(`Security email falló para ${to}: ${err.message}`);
     }
   }
 }
