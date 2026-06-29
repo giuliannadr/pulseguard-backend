@@ -88,7 +88,8 @@ export class MonitorsController {
     @Param('id') id: string,
     @Request() req: any,
     @Headers('x-github-token') githubToken: string,
+    @Query('force') force?: string,
   ) {
-    return this.service.scanRepo(id, req.user.id, githubToken);
+    return this.service.scanRepo(id, req.user.id, githubToken, force === 'true');
   }
 }

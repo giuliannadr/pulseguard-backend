@@ -110,9 +110,11 @@ export class GithubService {
     owner: string,
     repo: string,
     githubToken: string,
+    force = false,
   ) {
     try {
       this.logger.log(`Scanning commits for ${owner}/${repo} on monitor ${monitorId}...`);
+
       // Fetch latest 5 commits
       const { data: commits } = await axios.get(
         `https://api.github.com/repos/${owner}/${repo}/commits?per_page=5`,
@@ -123,6 +125,15 @@ export class GithubService {
           },
         },
       );
+
+      // If force, delete mock/stale incidents for these commits so they get re-analyzed
+      if (force) {
+        const hashes = commits.map((c: any) => c.sha);
+        const deleted = await this.prisma.securityIncident.deleteMany({
+          where: { monitorId, commitHash: { in: hashes } },
+        });
+        this.logger.log(`Force rescan: deleted ${deleted.count} stale incidents for monitor ${monitorId}`);
+      }
 
       const savedIncidents: any[] = [];
 
