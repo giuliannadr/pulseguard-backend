@@ -135,70 +135,64 @@ export class GithubService {
         this.logger.log(`Force rescan: deleted ${deleted.count} stale incidents for monitor ${monitorId}`);
       }
 
+      // Filter out already-scanned commits
+      const toScan: typeof commits = [];
+      for (const item of commits) {
+        const existing = await this.prisma.securityIncident.findFirst({
+          where: { monitorId, commitHash: item.sha },
+        });
+        if (!existing) toScan.push(item);
+      }
+
+      if (toScan.length === 0) {
+        return { success: true, count: 0 };
+      }
+
+      // Fetch all diffs in parallel
+      const diffsSettled = await Promise.allSettled(
+        toScan.map(item =>
+          axios.get(
+            `https://api.github.com/repos/${owner}/${repo}/commits/${item.sha}`,
+            { headers: { Authorization: `Bearer ${githubToken}`, Accept: 'application/vnd.github.v3.diff' } },
+          ).then(r => r.data as string)
+           .catch(() => 'Modified files in repository'),
+        ),
+      );
+
+      // Analyze all diffs with Gemini in parallel
+      const analysesSettled = await Promise.allSettled(
+        diffsSettled.map((r) =>
+          this.aiService.analyzeCommit(
+            r.status === 'fulfilled' ? r.value : 'Modified files in repository',
+          ),
+        ),
+      );
+
+      // Persist results & notify
+      const monitor = await this.prisma.monitor.findUnique({ where: { id: monitorId } });
       const savedIncidents: any[] = [];
 
-      for (const item of commits) {
+      for (let i = 0; i < toScan.length; i++) {
+        if (analysesSettled[i].status !== 'fulfilled') continue;
+        const item = toScan[i];
+        const analysis = (analysesSettled[i] as PromiseFulfilledResult<any>).value;
         const commitHash = item.sha;
         const commitAuthor = `${item.commit.author.name} <${item.commit.author.email}>`;
 
-        // Check if already scanned
-        const existing = await this.prisma.securityIncident.findFirst({
-          where: { monitorId, commitHash },
-        });
-
-        if (existing) {
-          continue;
-        }
-
-        // Fetch diff text
-        let diffText = 'Modified files in repository';
-        try {
-          const diffResponse = await axios.get(
-            `https://api.github.com/repos/${owner}/${repo}/commits/${commitHash}`,
-            {
-              headers: {
-                Authorization: `Bearer ${githubToken}`,
-                Accept: 'application/vnd.github.v3.diff',
-              },
-            },
-          );
-          diffText = diffResponse.data;
-        } catch (e: any) {
-          this.logger.warn(`Failed to fetch diff for commit ${commitHash}: ${e.message}`);
-        }
-
-        // Analyze
-        const analysis = await this.aiService.analyzeCommit(diffText);
-
-        // Save
         const incident = await this.prisma.securityIncident.create({
-          data: {
-            monitorId,
-            commitHash,
-            commitAuthor,
-            riskType: analysis.riskType,
-            severity: analysis.severity,
-            description: analysis.description,
-            recommendation: analysis.recommendation,
-          },
+          data: { monitorId, commitHash, commitAuthor, riskType: analysis.riskType, severity: analysis.severity, description: analysis.description, recommendation: analysis.recommendation },
         });
         savedIncidents.push(incident);
 
-        // Notify
-        const monitor = await this.prisma.monitor.findUnique({ where: { id: monitorId } });
         if (monitor) {
           await this.notifications.sendSecurityAlert(
-            monitor.notificationWebhookUrl,
-            monitor.name,
-            commitHash,
-            analysis.riskType,
-            analysis.severity,
-            analysis.description,
-            monitor.notificationEmail,
+            monitor.notificationWebhookUrl, monitor.name, commitHash,
+            analysis.riskType, analysis.severity, analysis.description, monitor.notificationEmail,
           );
         }
       }
 
+      this.logger.log(`Scan complete for ${owner}/${repo}: saved ${savedIncidents.length} new incidents`);
       return { success: true, count: savedIncidents.length };
     } catch (error: any) {
       this.logger.error(
