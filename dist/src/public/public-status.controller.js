@@ -37,7 +37,6 @@ let PublicStatusController = class PublicStatusController {
             return {
                 id: m.id,
                 name: m.name,
-                url: m.url,
                 status: lastCheck?.status ?? 'unknown',
                 uptime,
                 responseTimeMs: lastCheck?.responseTimeMs ?? null,

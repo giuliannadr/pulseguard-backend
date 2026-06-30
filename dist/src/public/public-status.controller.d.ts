@@ -5,7 +5,6 @@ export declare class PublicStatusController {
     getStatus(userId: string): Promise<{
         id: string;
         name: string;
-        url: string | null;
         status: string;
         uptime: number | null;
         responseTimeMs: number | null;

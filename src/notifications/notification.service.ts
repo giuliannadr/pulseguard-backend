@@ -1,10 +1,20 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import axios from 'axios';
+import { assertSafeUrl } from '../common/ssrf-guard';
 
 @Injectable()
 export class NotificationService implements OnModuleInit {
   private readonly logger = new Logger(NotificationService.name);
   private resendApiKey: string | null = null;
+
+  private escapeHtml(str: string): string {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
 
   onModuleInit() {
     this.resendApiKey = process.env.RESEND_API_KEY ?? null;
@@ -42,8 +52,10 @@ export class NotificationService implements OnModuleInit {
     title: string,
     details?: string,
   ) {
-    try { new URL(webhookUrl); } catch {
-      this.logger.warn(`Invalid webhook URL for ${monitorName}: ${webhookUrl}`);
+    try {
+      await assertSafeUrl(webhookUrl);
+    } catch {
+      this.logger.warn(`Blocked unsafe webhook URL for ${monitorName}: ${webhookUrl}`);
       return;
     }
 
@@ -123,10 +135,11 @@ export class NotificationService implements OnModuleInit {
     }
 
     const color = isRecovery ? '#00E676' : '#FF1744';
-    const urlRow = monitorUrl ? `<tr><td style="color:#888;padding:4px 0">URL</td><td><a href="${monitorUrl}" style="color:#CAFF00">${monitorUrl}</a></td></tr>` : '';
-    const errorRow = details ? `<tr><td style="color:#888;padding:4px 0">Error</td><td style="color:#FF1744">${details}</td></tr>` : '';
+    const safeUrl = monitorUrl ? this.escapeHtml(monitorUrl) : null;
+    const urlRow = safeUrl ? `<tr><td style="color:#888;padding:4px 0">URL</td><td><a href="${safeUrl}" style="color:#CAFF00">${safeUrl}</a></td></tr>` : '';
+    const errorRow = details ? `<tr><td style="color:#888;padding:4px 0">Error</td><td style="color:#FF1744">${this.escapeHtml(details)}</td></tr>` : '';
     const rows = `
-      <tr><td style="color:#888;padding:4px 0;width:80px">Monitor</td><td>${monitorName}</td></tr>
+      <tr><td style="color:#888;padding:4px 0;width:80px">Monitor</td><td>${this.escapeHtml(monitorName)}</td></tr>
       <tr><td style="color:#888;padding:4px 0">Estado</td><td style="color:${color}">${isRecovery ? '✅ En línea' : '🔴 Caído'}</td></tr>
       ${urlRow}${errorRow}
     `;
@@ -177,7 +190,12 @@ export class NotificationService implements OnModuleInit {
     emoji: string,
     title: string,
   ) {
-    try { new URL(webhookUrl); } catch { return; }
+    try {
+      await assertSafeUrl(webhookUrl);
+    } catch {
+      this.logger.warn(`Blocked unsafe security webhook URL: ${webhookUrl}`);
+      return;
+    }
 
     const colors: Record<string, number> = { critical: 0xff1744, high: 0xff5252, medium: 0xffb300, low: 0x00e676 };
     const color = colors[severity.toLowerCase()] ?? 0xff1744;
@@ -216,11 +234,11 @@ export class NotificationService implements OnModuleInit {
     const color = colors[severity.toLowerCase()] ?? '#FF1744';
 
     const rows = `
-      <tr><td style="color:#888;padding:4px 0;width:100px">Proyecto</td><td>${monitorName}</td></tr>
-      <tr><td style="color:#888;padding:4px 0">Commit</td><td><code>${commitHash.substring(0, 7)}</code></td></tr>
-      <tr><td style="color:#888;padding:4px 0">Tipo de riesgo</td><td style="color:${color};font-weight:bold">${riskType}</td></tr>
-      <tr><td style="color:#888;padding:4px 0">Severidad</td><td style="color:${color};font-weight:bold">${severity.toUpperCase()}</td></tr>
-      <tr><td style="color:#888;padding:4px 0;vertical-align:top">Descripción</td><td>${description}</td></tr>
+      <tr><td style="color:#888;padding:4px 0;width:100px">Proyecto</td><td>${this.escapeHtml(monitorName)}</td></tr>
+      <tr><td style="color:#888;padding:4px 0">Commit</td><td><code>${this.escapeHtml(commitHash.substring(0, 7))}</code></td></tr>
+      <tr><td style="color:#888;padding:4px 0">Tipo de riesgo</td><td style="color:${color};font-weight:bold">${this.escapeHtml(riskType)}</td></tr>
+      <tr><td style="color:#888;padding:4px 0">Severidad</td><td style="color:${color};font-weight:bold">${this.escapeHtml(severity.toUpperCase())}</td></tr>
+      <tr><td style="color:#888;padding:4px 0;vertical-align:top">Descripción</td><td>${this.escapeHtml(description)}</td></tr>
     `;
 
     const html = this.buildEmailHtml(title, color, rows, 'Enviado por PulseGuard DevSecOps · Revisá el dashboard para ver las mitigaciones');

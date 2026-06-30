@@ -222,7 +222,7 @@ let CheckerService = CheckerService_1 = class CheckerService {
                     path: url.pathname + url.search,
                     method: 'GET',
                     timeout: 8000,
-                    rejectUnauthorized: false
+                    rejectUnauthorized: false,
                 });
                 req.on('socket', (socket) => {
                     socket.on('lookup', () => {

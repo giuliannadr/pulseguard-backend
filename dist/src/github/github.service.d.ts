@@ -12,10 +12,14 @@ export declare class GithubService {
     autoConfigureWebhook(monitorId: string, owner: string, repo: string, token: string, userId: string): Promise<{
         success: boolean;
         webhookId: any;
-        simulated?: undefined;
+        webhookConfigured?: undefined;
+        repoLinked?: undefined;
+        error?: undefined;
     } | {
         success: boolean;
-        simulated: boolean;
+        webhookConfigured: boolean;
+        repoLinked: boolean;
+        error: string;
         webhookId?: undefined;
     }>;
     scanRepoCommits(monitorId: string, owner: string, repo: string, githubToken: string, force?: boolean): Promise<{

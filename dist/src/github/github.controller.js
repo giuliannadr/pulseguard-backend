@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GithubController = void 0;
 const common_1 = require("@nestjs/common");
+const crypto_1 = require("crypto");
 const github_service_1 = require("./github.service");
 const supabase_auth_guard_1 = require("../auth/supabase-auth.guard");
 let GithubController = class GithubController {
@@ -34,7 +35,21 @@ let GithubController = class GithubController {
         }
         return this.githubService.autoConfigureWebhook(monitorId, body.owner, body.repo, githubToken, req.user.id);
     }
-    async handleWebhook(event, payload) {
+    async handleWebhook(event, signature, req, payload) {
+        const secret = process.env.GITHUB_WEBHOOK_SECRET;
+        if (secret) {
+            if (!signature) {
+                throw new common_1.UnauthorizedException('Missing webhook signature');
+            }
+            const rawBody = req.rawBody ?? Buffer.from(JSON.stringify(payload));
+            const expected = `sha256=${(0, crypto_1.createHmac)('sha256', secret).update(rawBody).digest('hex')}`;
+            const sigBuf = Buffer.from(signature);
+            const expBuf = Buffer.from(expected);
+            const valid = sigBuf.length === expBuf.length && (0, crypto_1.timingSafeEqual)(sigBuf, expBuf);
+            if (!valid) {
+                throw new common_1.UnauthorizedException('Invalid webhook signature');
+            }
+        }
         if (event === 'push') {
             await this.githubService.handlePushEvent(payload);
         }
@@ -64,9 +79,11 @@ __decorate([
 __decorate([
     (0, common_1.Post)('webhook'),
     __param(0, (0, common_1.Headers)('x-github-event')),
-    __param(1, (0, common_1.Body)()),
+    __param(1, (0, common_1.Headers)('x-hub-signature-256')),
+    __param(2, (0, common_1.Req)()),
+    __param(3, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:paramtypes", [String, String, Object, Object]),
     __metadata("design:returntype", Promise)
 ], GithubController.prototype, "handleWebhook", null);
 exports.GithubController = GithubController = __decorate([

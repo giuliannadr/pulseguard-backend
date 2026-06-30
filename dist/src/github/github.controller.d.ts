@@ -1,3 +1,4 @@
+import type { RawBodyRequest } from '@nestjs/common';
 import { GithubService } from './github.service';
 export declare class GithubController {
     private readonly githubService;
@@ -9,13 +10,17 @@ export declare class GithubController {
     }, githubToken: string, req: any): Promise<{
         success: boolean;
         webhookId: any;
-        simulated?: undefined;
+        webhookConfigured?: undefined;
+        repoLinked?: undefined;
+        error?: undefined;
     } | {
         success: boolean;
-        simulated: boolean;
+        webhookConfigured: boolean;
+        repoLinked: boolean;
+        error: string;
         webhookId?: undefined;
     }>;
-    handleWebhook(event: string, payload: any): Promise<{
+    handleWebhook(event: string, signature: string, req: RawBodyRequest<any>, payload: any): Promise<{
         received: boolean;
     }>;
 }

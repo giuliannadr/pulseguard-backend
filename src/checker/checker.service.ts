@@ -214,7 +214,10 @@ export class CheckerService {
           path: url.pathname + url.search,
           method: 'GET',
           timeout: 8000,
-          rejectUnauthorized: false
+          // Intentionally disabled for network diagnostics — the goal is to measure
+          // TCP/TLS timing even for self-signed certs, not to validate the certificate.
+          // SSL validity is checked separately via getSslDaysLeft().
+          rejectUnauthorized: false,
         });
 
         req.on('socket', (socket) => {

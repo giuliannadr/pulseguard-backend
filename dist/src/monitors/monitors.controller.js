@@ -42,7 +42,8 @@ let MonitorsController = class MonitorsController {
         return this.service.remove(id, req.user.id);
     }
     getChecks(id, limit, req) {
-        return this.service.getChecks(id, req.user.id, limit ? parseInt(limit) : 100);
+        const parsedLimit = limit ? Math.min(parseInt(limit, 10) || 100, 1000) : 100;
+        return this.service.getChecks(id, req.user.id, parsedLimit);
     }
     getMetrics(id, req) {
         return this.service.getMetrics(id, req.user.id);

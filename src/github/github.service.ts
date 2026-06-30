@@ -95,13 +95,19 @@ export class GithubService {
         'Failed to create webhook',
         error.response?.data || error.message,
       );
-      // For demo purposes, if it fails (e.g. repo not found or lacks admin rights),
-      // we still link the repo to the monitor to simulate success.
+      // Link the repo even if webhook creation failed (e.g. lacks admin rights),
+      // but report failure so the user knows to configure the webhook manually.
       await this.prisma.monitor.update({
         where: { id: monitorId },
         data: { githubRepoUrl: `https://github.com/${owner}/${repo}` },
       });
-      return { success: true, simulated: true };
+      const reason = error.response?.data?.message || error.message || 'Unknown error';
+      return {
+        success: false,
+        webhookConfigured: false,
+        repoLinked: true,
+        error: `Repo linked but webhook creation failed: ${reason}. You can create it manually in GitHub → Settings → Webhooks.`,
+      };
     }
   }
 
@@ -221,17 +227,19 @@ export class GithubService {
     if (commits.length === 0) return;
 
     for (const commit of commits) {
-      // Fetch diff from github API
-      // commit.url is like https://api.github.com/repos/owner/repo/commits/hash
-      let diffText = 'Added some new code'; // fallback
-      try {
-        const { data } = await axios.get(commit.url, {
-          headers: { Accept: 'application/vnd.github.v3.diff' },
-        });
-        diffText = data;
-      } catch (e) {
-        this.logger.warn(`Failed to fetch diff for commit ${commit.id}`);
-      }
+      // Build a summary from the webhook payload itself — no auth token needed
+      // GitHub push events include added/removed/modified file lists and the commit message
+      const added = (commit.added ?? []).join('\n  + ');
+      const removed = (commit.removed ?? []).join('\n  - ');
+      const modified = (commit.modified ?? []).join('\n  ~ ');
+      const diffText = [
+        `Commit: ${commit.id}`,
+        `Message: ${commit.message}`,
+        `Author: ${commit.author?.name} <${commit.author?.email}>`,
+        added ? `Added files:\n  + ${added}` : '',
+        removed ? `Removed files:\n  - ${removed}` : '',
+        modified ? `Modified files:\n  ~ ${modified}` : '',
+      ].filter(Boolean).join('\n');
 
       // Analyze with AI
       const analysis = await this.aiService.analyzeCommit(diffText);

@@ -12,7 +12,7 @@ process.on('uncaughtException', (error) => {
     process.exit(1);
 });
 async function bootstrap() {
-    const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    const app = await core_1.NestFactory.create(app_module_1.AppModule, { rawBody: true });
     const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? 'http://localhost:3000')
         .split(',')
         .map(o => o.trim());

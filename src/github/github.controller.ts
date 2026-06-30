@@ -9,6 +9,8 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import type { RawBodyRequest } from '@nestjs/common';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { GithubService } from './github.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
@@ -48,8 +50,25 @@ export class GithubController {
   @Post('webhook')
   async handleWebhook(
     @Headers('x-github-event') event: string,
+    @Headers('x-hub-signature-256') signature: string,
+    @Req() req: RawBodyRequest<any>,
     @Body() payload: any,
   ) {
+    const secret = process.env.GITHUB_WEBHOOK_SECRET;
+    if (secret) {
+      if (!signature) {
+        throw new UnauthorizedException('Missing webhook signature');
+      }
+      const rawBody: Buffer = req.rawBody ?? Buffer.from(JSON.stringify(payload));
+      const expected = `sha256=${createHmac('sha256', secret).update(rawBody).digest('hex')}`;
+      const sigBuf = Buffer.from(signature);
+      const expBuf = Buffer.from(expected);
+      const valid = sigBuf.length === expBuf.length && timingSafeEqual(sigBuf, expBuf);
+      if (!valid) {
+        throw new UnauthorizedException('Invalid webhook signature');
+      }
+    }
+
     if (event === 'push') {
       await this.githubService.handlePushEvent(payload);
     }

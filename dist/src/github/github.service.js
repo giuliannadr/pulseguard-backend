@@ -90,7 +90,13 @@ let GithubService = GithubService_1 = class GithubService {
                 where: { id: monitorId },
                 data: { githubRepoUrl: `https://github.com/${owner}/${repo}` },
             });
-            return { success: true, simulated: true };
+            const reason = error.response?.data?.message || error.message || 'Unknown error';
+            return {
+                success: false,
+                webhookConfigured: false,
+                repoLinked: true,
+                error: `Repo linked but webhook creation failed: ${reason}. You can create it manually in GitHub → Settings → Webhooks.`,
+            };
         }
     }
     async scanRepoCommits(monitorId, owner, repo, githubToken, force = false) {
@@ -161,16 +167,17 @@ let GithubService = GithubService_1 = class GithubService {
         if (commits.length === 0)
             return;
         for (const commit of commits) {
-            let diffText = 'Added some new code';
-            try {
-                const { data } = await axios_1.default.get(commit.url, {
-                    headers: { Accept: 'application/vnd.github.v3.diff' },
-                });
-                diffText = data;
-            }
-            catch (e) {
-                this.logger.warn(`Failed to fetch diff for commit ${commit.id}`);
-            }
+            const added = (commit.added ?? []).join('\n  + ');
+            const removed = (commit.removed ?? []).join('\n  - ');
+            const modified = (commit.modified ?? []).join('\n  ~ ');
+            const diffText = [
+                `Commit: ${commit.id}`,
+                `Message: ${commit.message}`,
+                `Author: ${commit.author?.name} <${commit.author?.email}>`,
+                added ? `Added files:\n  + ${added}` : '',
+                removed ? `Removed files:\n  - ${removed}` : '',
+                modified ? `Modified files:\n  ~ ${modified}` : '',
+            ].filter(Boolean).join('\n');
             const analysis = await this.aiService.analyzeCommit(diffText);
             for (const monitor of monitors) {
                 await this.prisma.securityIncident.create({

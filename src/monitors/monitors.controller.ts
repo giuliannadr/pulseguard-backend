@@ -60,11 +60,8 @@ export class MonitorsController {
     @Query('limit') limit: string,
     @Request() req: any,
   ) {
-    return this.service.getChecks(
-      id,
-      req.user.id,
-      limit ? parseInt(limit) : 100,
-    );
+    const parsedLimit = limit ? Math.min(parseInt(limit, 10) || 100, 1000) : 100;
+    return this.service.getChecks(id, req.user.id, parsedLimit);
   }
 
   @Get(':id/metrics')
