@@ -1,27 +1,17 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import axios from 'axios';
-import * as nodemailer from 'nodemailer';
-import { Transporter } from 'nodemailer';
 
 @Injectable()
 export class NotificationService implements OnModuleInit {
   private readonly logger = new Logger(NotificationService.name);
-  private transporter: Transporter | null = null;
-  private fromAddress = 'PulseGuard <noreply@pulseguard.dev>';
+  private resendApiKey: string | null = null;
 
-  async onModuleInit() {
-    try {
-      const testAccount = await nodemailer.createTestAccount();
-      this.transporter = nodemailer.createTransport({
-        host: 'smtp.ethereal.email',
-        port: 587,
-        secure: false,
-        auth: { user: testAccount.user, pass: testAccount.pass },
-      });
-      this.fromAddress = `PulseGuard <${testAccount.user}>`;
-      this.logger.log(`Ethereal SMTP ready — user: ${testAccount.user} / pass: ${testAccount.pass} — https://ethereal.email/messages`);
-    } catch (err: any) {
-      this.logger.warn(`Could not create Ethereal test account: ${err.message} — email notifications disabled`);
+  onModuleInit() {
+    this.resendApiKey = process.env.RESEND_API_KEY ?? null;
+    if (this.resendApiKey) {
+      this.logger.log('Resend email service ready');
+    } else {
+      this.logger.warn('RESEND_API_KEY not set — email notifications disabled');
     }
   }
 
@@ -101,6 +91,24 @@ export class NotificationService implements OnModuleInit {
     }
   }
 
+  private buildEmailHtml(
+    title: string,
+    color: string,
+    rows: string,
+    footer: string,
+  ): string {
+    return `
+<div style="background:#0A0A0A;color:#F0F0F0;font-family:monospace;padding:32px;border-radius:6px;max-width:520px">
+  <div style="font-size:11px;color:#CAFF00;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">// PulseGuard Alertas</div>
+  <h2 style="margin:0 0 24px;font-size:22px;color:${color}">${title}</h2>
+  <table style="border-collapse:collapse;font-size:13px;width:100%">
+    ${rows}
+    <tr><td style="color:#888;padding:4px 0">Hora</td><td>${new Date().toLocaleString('es-AR')}</td></tr>
+  </table>
+  <div style="margin-top:24px;font-size:11px;color:#4A4A4A">${footer}</div>
+</div>`;
+  }
+
   private async sendEmail(
     to: string,
     monitorName: string,
@@ -109,7 +117,7 @@ export class NotificationService implements OnModuleInit {
     title: string,
     details?: string,
   ) {
-    if (!this.transporter) {
+    if (!this.resendApiKey) {
       this.logger.warn('Email transport no disponible — omitiendo notificación por email');
       return;
     }
@@ -117,34 +125,27 @@ export class NotificationService implements OnModuleInit {
     const color = isRecovery ? '#00E676' : '#FF1744';
     const urlRow = monitorUrl ? `<tr><td style="color:#888;padding:4px 0">URL</td><td><a href="${monitorUrl}" style="color:#CAFF00">${monitorUrl}</a></td></tr>` : '';
     const errorRow = details ? `<tr><td style="color:#888;padding:4px 0">Error</td><td style="color:#FF1744">${details}</td></tr>` : '';
+    const rows = `
+      <tr><td style="color:#888;padding:4px 0;width:80px">Monitor</td><td>${monitorName}</td></tr>
+      <tr><td style="color:#888;padding:4px 0">Estado</td><td style="color:${color}">${isRecovery ? '✅ En línea' : '🔴 Caído'}</td></tr>
+      ${urlRow}${errorRow}
+    `;
 
-    const html = `
-<div style="background:#0A0A0A;color:#F0F0F0;font-family:monospace;padding:32px;border-radius:6px;max-width:520px">
-  <div style="font-size:11px;color:#CAFF00;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">// PulseGuard Alertas</div>
-  <h2 style="margin:0 0 24px;font-size:22px;color:${color}">${title}</h2>
-  <table style="border-collapse:collapse;font-size:13px;width:100%">
-    <tr><td style="color:#888;padding:4px 0;width:80px">Monitor</td><td>${monitorName}</td></tr>
-    <tr><td style="color:#888;padding:4px 0">Estado</td><td style="color:${color}">${isRecovery ? '✅ En línea' : '🔴 Caído'}</td></tr>
-    ${urlRow}${errorRow}
-    <tr><td style="color:#888;padding:4px 0">Hora</td><td>${new Date().toLocaleString('es-AR')}</td></tr>
-  </table>
-  <div style="margin-top:24px;font-size:11px;color:#4A4A4A">Enviado por PulseGuard · Gestioná tus alertas desde el dashboard</div>
-</div>`;
+    const html = this.buildEmailHtml(title, color, rows, 'Enviado por PulseGuard · Gestioná tus alertas desde el dashboard');
 
     try {
-      const info = await this.transporter.sendMail({
-        from: this.fromAddress,
+      await axios.post('https://api.resend.com/emails', {
+        from: 'PulseGuard <onboarding@resend.dev>',
         to,
         subject: `[PulseGuard] ${title}`,
         html,
+      }, {
+        headers: { Authorization: `Bearer ${this.resendApiKey}`, 'Content-Type': 'application/json' },
+        timeout: 10000,
       });
-      const previewUrl = nodemailer.getTestMessageUrl(info);
       this.logger.log(`Email enviado a ${to} para ${monitorName}`);
-      if (previewUrl) {
-        this.logger.log(`Vista previa del email: ${previewUrl}`);
-      }
     } catch (err: any) {
-      this.logger.warn(`Email falló para ${monitorName}: ${err.message}`);
+      this.logger.warn(`Email falló para ${monitorName}: ${err.response?.data?.message ?? err.message}`);
     }
   }
 
@@ -178,45 +179,18 @@ export class NotificationService implements OnModuleInit {
   ) {
     try { new URL(webhookUrl); } catch { return; }
 
-    const colors: Record<string, number> = {
-      critical: 0xff1744,
-      high: 0xff5252,
-      medium: 0xffb300,
-      low: 0x00e676
-    };
+    const colors: Record<string, number> = { critical: 0xff1744, high: 0xff5252, medium: 0xffb300, low: 0x00e676 };
     const color = colors[severity.toLowerCase()] ?? 0xff1744;
     const isDiscord = webhookUrl.includes('discord.com/api/webhooks');
     const isSlack = webhookUrl.includes('hooks.slack.com');
 
     let payload: object;
     if (isDiscord) {
-      payload = {
-        embeds: [{
-          title: `${emoji} ${title}`,
-          description: `PulseGuard AI analizó un nuevo push.\n\n**Commit:** \`${commitHash.substring(0, 7)}\`\n**Tipo de riesgo:** ${riskType}\n**Descripción:** ${description}`,
-          color,
-          timestamp: new Date().toISOString(),
-          footer: { text: 'PulseGuard Security Scanner' },
-        }],
-      };
+      payload = { embeds: [{ title: `${emoji} ${title}`, description: `PulseGuard AI analizó un nuevo push.\n\n**Commit:** \`${commitHash.substring(0, 7)}\`\n**Tipo de riesgo:** ${riskType}\n**Descripción:** ${description}`, color, timestamp: new Date().toISOString(), footer: { text: 'PulseGuard Security Scanner' } }] };
     } else if (isSlack) {
-      payload = {
-        text: `${emoji} *${title}*`,
-        blocks: [{
-          type: 'section',
-          text: { type: 'mrkdwn', text: `${emoji} *${title}*\n*Commit:* \`${commitHash.substring(0, 7)}\`\n*Riesgo:* ${riskType}\n*Descripción:* ${description}` },
-        }],
-      };
+      payload = { text: `${emoji} *${title}*`, blocks: [{ type: 'section', text: { type: 'mrkdwn', text: `${emoji} *${title}*\n*Commit:* \`${commitHash.substring(0, 7)}\`\n*Riesgo:* ${riskType}\n*Descripción:* ${description}` } }] };
     } else {
-      payload = {
-        event: 'security_alert',
-        monitor: monitorName,
-        commit: commitHash,
-        risk: riskType,
-        severity,
-        description,
-        timestamp: new Date().toISOString(),
-      };
+      payload = { event: 'security_alert', monitor: monitorName, commit: commitHash, risk: riskType, severity, description, timestamp: new Date().toISOString() };
     }
 
     try {
@@ -236,47 +210,34 @@ export class NotificationService implements OnModuleInit {
     description: string,
     title: string,
   ) {
-    if (!this.transporter) {
-      this.logger.warn('Email transport no disponible — omitiendo notificación de seguridad');
-      return;
-    }
+    if (!this.resendApiKey) return;
 
-    const colors: Record<string, string> = {
-      critical: '#FF1744',
-      high: '#FF5252',
-      medium: '#FFB300',
-      low: '#00E676'
-    };
+    const colors: Record<string, string> = { critical: '#FF1744', high: '#FF5252', medium: '#FFB300', low: '#00E676' };
     const color = colors[severity.toLowerCase()] ?? '#FF1744';
 
-    const html = `
-<div style="background:#0A0A0A;color:#F0F0F0;font-family:monospace;padding:32px;border-radius:6px;max-width:520px">
-  <div style="font-size:11px;color:#CAFF00;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">// PulseGuard SecOps</div>
-  <h2 style="margin:0 0 24px;font-size:20px;color:${color}">${title}</h2>
-  <table style="border-collapse:collapse;font-size:13px;width:100%">
-    <tr><td style="color:#888;padding:4px 0;width:100px">Proyecto</td><td>${monitorName}</td></tr>
-    <tr><td style="color:#888;padding:4px 0">Commit</td><td><code>${commitHash.substring(0, 7)}</code></td></tr>
-    <tr><td style="color:#888;padding:4px 0">Tipo de riesgo</td><td style="color:${color};font-weight:bold">${riskType}</td></tr>
-    <tr><td style="color:#888;padding:4px 0">Severidad</td><td style="color:${color};font-weight:bold">${severity.toUpperCase()}</td></tr>
-    <tr><td style="color:#888;padding:4px 0;vertical-align:top">Descripción</td><td>${description}</td></tr>
-  </table>
-  <div style="margin-top:24px;font-size:11px;color:#4A4A4A">Enviado por PulseGuard DevSecOps · Revisá el dashboard para ver las mitigaciones</div>
-</div>`;
+    const rows = `
+      <tr><td style="color:#888;padding:4px 0;width:100px">Proyecto</td><td>${monitorName}</td></tr>
+      <tr><td style="color:#888;padding:4px 0">Commit</td><td><code>${commitHash.substring(0, 7)}</code></td></tr>
+      <tr><td style="color:#888;padding:4px 0">Tipo de riesgo</td><td style="color:${color};font-weight:bold">${riskType}</td></tr>
+      <tr><td style="color:#888;padding:4px 0">Severidad</td><td style="color:${color};font-weight:bold">${severity.toUpperCase()}</td></tr>
+      <tr><td style="color:#888;padding:4px 0;vertical-align:top">Descripción</td><td>${description}</td></tr>
+    `;
+
+    const html = this.buildEmailHtml(title, color, rows, 'Enviado por PulseGuard DevSecOps · Revisá el dashboard para ver las mitigaciones');
 
     try {
-      const info = await this.transporter.sendMail({
-        from: this.fromAddress,
+      await axios.post('https://api.resend.com/emails', {
+        from: 'PulseGuard <onboarding@resend.dev>',
         to,
         subject: `[PulseGuard Seguridad] ${title}`,
         html,
+      }, {
+        headers: { Authorization: `Bearer ${this.resendApiKey}`, 'Content-Type': 'application/json' },
+        timeout: 10000,
       });
-      const previewUrl = nodemailer.getTestMessageUrl(info);
       this.logger.log(`Security email enviado a ${to} para ${monitorName}`);
-      if (previewUrl) {
-        this.logger.log(`Vista previa del email de seguridad: ${previewUrl}`);
-      }
     } catch (err: any) {
-      this.logger.warn(`Security email falló para ${to}: ${err.message}`);
+      this.logger.warn(`Security email falló para ${to}: ${err.response?.data?.message ?? err.message}`);
     }
   }
 }

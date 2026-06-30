@@ -1,113 +1,187 @@
-# PulseGuard — Backend (NestJS + Prisma + PostgreSQL)
+# PulseGuard — Backend
 
-PulseGuard es una plataforma DevSecOps y de monitoreo de disponibilidad en tiempo real. Este repositorio contiene el código del backend, una API REST construida sobre **NestJS** que integra **Prisma ORM**, **Supabase PostgreSQL** y **Gemini 2.5 Flash** para auditoría y simulaciones de seguridad automáticas.
+> API REST para monitoreo de disponibilidad, análisis de seguridad con IA y notificaciones en tiempo real.
 
-## 🛠 Arquitectura del Software (Clean Architecture Rules)
+**Demo en vivo:** https://pulseguard-frontend.vercel.app  
+**Repositorio frontend:** https://github.com/giuliannadr/pulseguard-frontend
 
-El backend de PulseGuard se ha diseñado siguiendo los principios de la **Arquitectura Limpia (Clean Architecture)** y separación de responsabilidades en capas para garantizar la testabilidad, escalabilidad y facilidad de mantenimiento:
+---
+
+## ¿De qué trata el proyecto?
+
+PulseGuard es una plataforma DevSecOps que monitorea APIs y sitios web. Este repositorio contiene la API REST construida con NestJS que se encarga de:
+
+- **Checks de uptime** automáticos cada N minutos con evaluación de SSL, headers de seguridad y tiempo de respuesta
+- **Análisis de commits con IA** — detecta vulnerabilidades en diffs de GitHub usando Gemini 2.5 Flash
+- **Notificaciones** por email (Resend) y webhooks (Discord/Slack) cuando un monitor cambia de estado
+- **Playground de seguridad** — endpoints para auditoría de APIs, SAST de código, inspección DNS/SSL y simulación de ataques
+- **Página de estado pública** sin autenticación para compartir con clientes
+
+---
+
+## Arquitectura
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│ 1. Frameworks & Drivers (Prisma, PostgreSQL, Gemini API)    │
-│    └─ Outer infrastructure detail                           │
-├─────────────────────────────────────────────────────────────┤
-│ 2. Interface Adapters (NestJS Controllers, DTOs, Guards)   │
-│    └─ Receives HTTP transport & parses payloads             │
-├─────────────────────────────────────────────────────────────┤
-│ 3. Use Cases / Services (MonitorsService, PlaygroundService)│
-│    └─ Core business logic rules & orchestrators             │
-├─────────────────────────────────────────────────────────────┤
-│ 4. Entities / Domain (Database Schema models)               │
-│    └─ Core database entities independent of framework       │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  Frontend (Next.js / Vercel)                                 │
+│  Supabase Realtime ──────────────────────────── Browser      │
+└────────────────────────┬─────────────────────────────────────┘
+                         │ REST API
+┌────────────────────────▼─────────────────────────────────────┐
+│  NestJS Backend (Railway)                                     │
+│                                                              │
+│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────┐  │
+│  │ Monitors    │  │ Scheduler    │  │ Playground         │  │
+│  │ Controller  │  │ (Cron/min)   │  │ (AI endpoints)     │  │
+│  └──────┬──────┘  └──────┬───────┘  └─────────┬──────────┘  │
+│         │                │                     │              │
+│  ┌──────▼────────────────▼─────────────────────▼──────────┐  │
+│  │  Services: MonitorsService, CheckerService,             │  │
+│  │  GithubService, NotificationService, AiService          │  │
+│  └──────────────────────────┬──────────────────────────────┘  │
+│                             │                                  │
+│  ┌──────────────────────────▼──────────────────────────────┐  │
+│  │  Prisma ORM → PostgreSQL (Supabase)                     │  │
+│  └─────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
+         │                           │
+  Gemini 2.5 Flash API         Resend Email API
+  (Security scanning)          (Alertas)
 ```
 
-1. **Capa de Entidades (Domain Entities):** Definidas en `prisma/schema.prisma`. Contiene los modelos base independientes de la lógica de negocio: `Monitor`, `Check` y `SecurityIncident`.
-2. **Capa de Casos de Uso (Services):** Contienen las reglas esenciales de negocio (ej. `MonitorsService`, `GithubService`, `PlaygroundService`). No tienen dependencias con el protocolo de transporte (HTTP) ni cabeceras express.
-3. **Capa de Adaptadores de Interfaz (Controllers & Guards):** En `src/**/*.controller.ts`. Son responsables de recibir las peticiones REST, validar DTOs, aplicar el middleware de autenticación (`SupabaseAuthGuard`) y retornar los payloads en formato JSON.
-4. **Capa de Frameworks (Drivers):** Herramientas externas que se inyectan en la aplicación (Base de datos PostgreSQL en Supabase, Axios para solicitudes HTTP, Google Generative AI SDK para el escaneo de código).
+### Módulos principales
+
+| Módulo | Responsabilidad |
+|---|---|
+| `MonitorsModule` | CRUD de monitores, métricas, checks on-demand |
+| `SchedulerModule` | Cron cada minuto — ejecuta checks y dispara notificaciones |
+| `CheckerModule` | HTTP health check con evaluación de SSL y security headers |
+| `GithubModule` | Conexión con GitHub API, análisis de commits con Gemini |
+| `NotificationModule` | Email (Resend) y webhooks (Discord/Slack/genérico) |
+| `PlaygroundModule` | Endpoints de auditoría: API, código, DNS, simulador de ataques |
+| `PublicStatusModule` | Endpoint sin auth para la página de estado pública |
 
 ---
 
-## 🚀 Tecnologías Principales
+## Tecnologías elegidas y por qué
 
-- **NestJS:** Framework progresivo de Node.js para construir servicios desacoplados.
-- **Prisma ORM:** Modelado de tipos seguro y consultas SQL estructuradas.
-- **Supabase (PostgreSQL):** Base de datos persistente con soporte para suscripciones en tiempo real.
-- **Gemini 2.5 Flash:** Modelo de lenguaje generativo utilizado para auditoría de código estático (SAST), auditoría de cabeceras seguras de API y análisis del simulador de ataques.
-- **Axios:** Cliente HTTP para pruebas de endpoints y descargas de diffs desde GitHub API.
-
----
-
-## 🤖 Orquestación de IA y Decisiones de Ingeniería
-
-El desarrollo de PulseGuard se ha realizado asistido por **modelos de lenguaje avanzados (Gemini 3.5 / Claude)**. 
-- **Criterio de QA Humano-en-el-Bucle (Human-in-the-Loop):** Se auditaron todas las salidas generadas, adaptando los tipos estrictos de TypeScript y reparando las APIs de streaming JSON.
-- **Ingeniería de Prompts para Seguridad:** Se desarrollaron prompts estructurados con validación de esquemas estricta (`SchemaType.OBJECT`) para asegurar que Gemini responda en formato JSON predecible, mitigando alucinaciones y asegurando códigos de estado estables.
+| Tecnología | Motivo |
+|---|---|
+| **NestJS** | Framework modular con DI nativa — facilita testing unitario y separación de responsabilidades |
+| **Prisma 7** | ORM con tipado estricto generado desde el schema, migraciones reproducibles |
+| **Supabase (PostgreSQL)** | Base de datos con realtime integrado — el frontend se suscribe a cambios sin polling |
+| **Gemini 2.5 Flash** | Análisis de seguridad de código con respuesta estructurada en JSON (schema validation) |
+| **Resend** | Email via HTTPS API — sin restricciones de puertos SMTP en Railway |
+| **Nodemailer** (removido) | Se reemplazó por Resend porque Railway bloquea el puerto 587 (SMTP saliente) |
 
 ---
 
-## 🧪 Simulador de Ataques Integrado (Playground)
+## Uso de herramientas de IA
 
-El backend expone endpoints interactivos bajo la ruta `/playground` que permiten realizar auditorías seguras en tiempo real:
-- **API Auditor:** Realiza peticiones asíncronas y audita con Gemini la seguridad de los headers (CORS, HSTS, XSS protection, cookies seguras).
-- **Code Auditor (SAST):** Analiza dependencias y código en busca de malas prácticas o claves secretas inyectadas.
-- **Hacking Simulator:** Ejecuta probes inofensivos (`SQL Injection` con lógica OR, `Reflected XSS`, ráfagas rápidas para evaluar `Rate Limiting` y `Sensitive Path Traversal` como buscar `/.env`) para diagnosticar la resiliencia del servidor.
+Desarrollado con **Claude Code (Anthropic)** durante la semana del challenge.
+
+**Cómo se aplicó:**
+- **Generación de servicios:** Los servicios de NestJS (checker, github, scheduler) se generaron con IA y se auditaron para corregir casos edge (falta de manejo de timeouts, promesas no resueltas)
+- **Paralelización con IA:** Se identificó que el scan de commits era secuencial y lento — con ayuda de Claude se refactorizó a `Promise.allSettled` para analizar todos los commits simultáneamente
+- **Debugging de Railway:** Se diagnosticó por qué el `dist/` commiteado hacía que Railway ignorara cambios en el código fuente — solución: compilar y commitear el `dist/` actualizado
+- **Prompts de Gemini:** Se iteraron los prompts para obtener análisis en español, concisos, con severidad categorizada (critical/high/medium/low) y formato JSON estricto con schema validation
 
 ---
 
-## 📦 Instalación y Configuración Local
+## Instalación local
 
 ### Prerrequisitos
-- Node.js v20.x o v22.x
-- Cuenta de Supabase (Base de datos PostgreSQL)
-- Clave de API de Gemini (`GEMINI_API_KEY`)
+- Node.js v20+
+- Cuenta de Supabase con base de datos PostgreSQL
+- API key de Gemini (Google AI Studio — gratuita)
+- API key de Resend (gratuita en resend.com)
 
-### Variables de Entorno (`.env`)
-Crea un archivo `.env` en la raíz de `pulseguard-backend/`:
+### Variables de entorno (`.env`)
+
 ```env
 PORT=3001
-API_URL=http://localhost:3001/api
 
-# Database connection
-DATABASE_URL="postgresql://postgres:password@aws-db.pooler.supabase.com:5432/postgres?pgbouncer=true"
-DIRECT_URL="postgresql://postgres:password@aws-db.pooler.supabase.com:5432/postgres"
+# Base de datos
+DATABASE_URL="postgresql://postgres:PASSWORD@HOST:5432/postgres?pgbouncer=true"
+DIRECT_URL="postgresql://postgres:PASSWORD@HOST:5432/postgres"
 
 # Supabase Auth
-SUPABASE_URL="https://rswebvxvtppfopegedfb.supabase.co"
-SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOi..."
+SUPABASE_URL="https://tu-proyecto.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY="tu_service_role_key"
 
-# Google Gemini AI Key
+# Google Gemini AI
 GEMINI_API_KEY="AIzaSy..."
+
+# Email (Resend)
+RESEND_API_KEY="re_..."
 ```
 
-### Ejecutar Localmente
-1. Instalar dependencias:
-   ```bash
-   npm install
-   ```
-2. Generar el cliente Prisma:
-   ```bash
-   npx prisma generate
-   ```
-3. Sincronizar esquema de base de datos:
-   ```bash
-   npx prisma db push
-   ```
-4. Levantar servidor de desarrollo:
-   ```bash
-   npm run start:dev
-   ```
+### Pasos
+
+```bash
+npm install
+npx prisma generate
+npx prisma db push      # Crea las tablas en Supabase
+npm run start:dev       # Servidor en http://localhost:3001
+```
+
+### Build de producción
+
+```bash
+npm run build
+npm run start:prod
+```
+
+> **Importante:** Railway ejecuta el `dist/` commiteado. Siempre correr `npm run build` y commitear el `dist/` antes de pushear cambios al backend.
 
 ---
 
-## 🛡 Verificación y Tests
+## Tests
 
-Para ejecutar las suites de prueba unitarias:
 ```bash
-npm run test
+npm run test          # Unit tests (Jest)
+npm run test:cov      # Con coverage report
 ```
-Para verificar la compilación estricta de TypeScript antes de producción:
-```bash
-npm run build
+
+Tests incluidos:
+- `MonitorsService` — CRUD, cálculo de métricas, check on-demand
+- `CheckerService` — comportamiento ante URLs inalcanzables
+
+---
+
+## CI/CD
+
+GitHub Actions corre en cada push a `main`:
+- **Build** — `nest build`
+- **Tests** — `jest`
+
+Ver [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
+
+---
+
+## Schema de base de datos
+
+```prisma
+Monitor {
+  id, userId, name, url
+  expectedStatus, expectedText, intervalMinutes
+  isActive, lastStatus
+  notificationEmail, notificationWebhookUrl
+  githubRepoUrl, securityGrade
+  checks[]          // historial de checks HTTP
+  securityIncidents[] // vulnerabilidades detectadas por IA
+}
+
+Check {
+  id, monitorId, status (up/down/degraded)
+  statusCode, responseTimeMs, sslDaysLeft
+  securityGrade, securityHeaders
+  checkedAt
+}
+
+SecurityIncident {
+  id, monitorId, commitHash, commitAuthor
+  riskType, severity, description, recommendation
+  resolved, createdAt
+}
 ```
