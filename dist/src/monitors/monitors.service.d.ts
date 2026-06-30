@@ -168,7 +168,7 @@ export declare class MonitorsService {
         commitAuthor: string | null;
         resolved: boolean;
     }[]>;
-    scanRepo(id: string, userId: string, githubToken: string): Promise<{
+    scanRepo(id: string, userId: string, githubToken: string, force?: boolean): Promise<{
         success: boolean;
         count: number;
     }>;

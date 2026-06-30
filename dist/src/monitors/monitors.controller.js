@@ -16,12 +16,15 @@ exports.MonitorsController = void 0;
 const common_1 = require("@nestjs/common");
 const supabase_auth_guard_1 = require("../auth/supabase-auth.guard");
 const monitors_service_1 = require("./monitors.service");
+const notification_service_1 = require("../notifications/notification.service");
 const create_monitor_dto_1 = require("./dto/create-monitor.dto");
 const update_monitor_dto_1 = require("./dto/update-monitor.dto");
 let MonitorsController = class MonitorsController {
     service;
-    constructor(service) {
+    notifications;
+    constructor(service, notifications) {
         this.service = service;
+        this.notifications = notifications;
     }
     findAll(req) {
         return this.service.findAll(req.user.id);
@@ -53,8 +56,16 @@ let MonitorsController = class MonitorsController {
     getDowntimeHistory(id, req) {
         return this.service.getDowntimeHistory(id, req.user.id);
     }
-    scanRepo(id, req, githubToken) {
-        return this.service.scanRepo(id, req.user.id, githubToken);
+    async testEmail(id, req) {
+        const monitor = await this.service.findOne(id, req.user.id);
+        if (!monitor.notificationEmail) {
+            return { ok: false, message: 'No hay email de notificación configurado en este monitor.' };
+        }
+        await this.notifications.send(null, monitor.name, monitor.url, 'down', 'Este es un email de prueba enviado desde PulseGuard.', monitor.notificationEmail);
+        return { ok: true, message: `Email de prueba enviado a ${monitor.notificationEmail}` };
+    }
+    scanRepo(id, req, githubToken, force) {
+        return this.service.scanRepo(id, req.user.id, githubToken, force === 'true');
     }
 };
 exports.MonitorsController = MonitorsController;
@@ -140,17 +151,27 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], MonitorsController.prototype, "getDowntimeHistory", null);
 __decorate([
+    (0, common_1.Post)(':id/test-email'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], MonitorsController.prototype, "testEmail", null);
+__decorate([
     (0, common_1.Post)(':id/scan-repo'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Request)()),
     __param(2, (0, common_1.Headers)('x-github-token')),
+    __param(3, (0, common_1.Query)('force')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object, String]),
+    __metadata("design:paramtypes", [String, Object, String, String]),
     __metadata("design:returntype", void 0)
 ], MonitorsController.prototype, "scanRepo", null);
 exports.MonitorsController = MonitorsController = __decorate([
     (0, common_1.UseGuards)(supabase_auth_guard_1.SupabaseAuthGuard),
     (0, common_1.Controller)('monitors'),
-    __metadata("design:paramtypes", [monitors_service_1.MonitorsService])
+    __metadata("design:paramtypes", [monitors_service_1.MonitorsService,
+        notification_service_1.NotificationService])
 ], MonitorsController);
 //# sourceMappingURL=monitors.controller.js.map

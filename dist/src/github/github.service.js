@@ -93,7 +93,7 @@ let GithubService = GithubService_1 = class GithubService {
             return { success: true, simulated: true };
         }
     }
-    async scanRepoCommits(monitorId, owner, repo, githubToken) {
+    async scanRepoCommits(monitorId, owner, repo, githubToken, force = false) {
         try {
             this.logger.log(`Scanning commits for ${owner}/${repo} on monitor ${monitorId}...`);
             const { data: commits } = await axios_1.default.get(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=5`, {
@@ -102,47 +102,45 @@ let GithubService = GithubService_1 = class GithubService {
                     Accept: 'application/vnd.github.v3+json',
                 },
             });
-            const savedIncidents = [];
+            if (force) {
+                const hashes = commits.map((c) => c.sha);
+                const deleted = await this.prisma.securityIncident.deleteMany({
+                    where: { monitorId, commitHash: { in: hashes } },
+                });
+                this.logger.log(`Force rescan: deleted ${deleted.count} stale incidents for monitor ${monitorId}`);
+            }
+            const toScan = [];
             for (const item of commits) {
+                const existing = await this.prisma.securityIncident.findFirst({
+                    where: { monitorId, commitHash: item.sha },
+                });
+                if (!existing)
+                    toScan.push(item);
+            }
+            if (toScan.length === 0) {
+                return { success: true, count: 0 };
+            }
+            const diffsSettled = await Promise.allSettled(toScan.map(item => axios_1.default.get(`https://api.github.com/repos/${owner}/${repo}/commits/${item.sha}`, { headers: { Authorization: `Bearer ${githubToken}`, Accept: 'application/vnd.github.v3.diff' } }).then(r => r.data)
+                .catch(() => 'Modified files in repository')));
+            const analysesSettled = await Promise.allSettled(diffsSettled.map((r) => this.aiService.analyzeCommit(r.status === 'fulfilled' ? r.value : 'Modified files in repository')));
+            const monitor = await this.prisma.monitor.findUnique({ where: { id: monitorId } });
+            const savedIncidents = [];
+            for (let i = 0; i < toScan.length; i++) {
+                if (analysesSettled[i].status !== 'fulfilled')
+                    continue;
+                const item = toScan[i];
+                const analysis = analysesSettled[i].value;
                 const commitHash = item.sha;
                 const commitAuthor = `${item.commit.author.name} <${item.commit.author.email}>`;
-                const existing = await this.prisma.securityIncident.findFirst({
-                    where: { monitorId, commitHash },
-                });
-                if (existing) {
-                    continue;
-                }
-                let diffText = 'Modified files in repository';
-                try {
-                    const diffResponse = await axios_1.default.get(`https://api.github.com/repos/${owner}/${repo}/commits/${commitHash}`, {
-                        headers: {
-                            Authorization: `Bearer ${githubToken}`,
-                            Accept: 'application/vnd.github.v3.diff',
-                        },
-                    });
-                    diffText = diffResponse.data;
-                }
-                catch (e) {
-                    this.logger.warn(`Failed to fetch diff for commit ${commitHash}: ${e.message}`);
-                }
-                const analysis = await this.aiService.analyzeCommit(diffText);
                 const incident = await this.prisma.securityIncident.create({
-                    data: {
-                        monitorId,
-                        commitHash,
-                        commitAuthor,
-                        riskType: analysis.riskType,
-                        severity: analysis.severity,
-                        description: analysis.description,
-                        recommendation: analysis.recommendation,
-                    },
+                    data: { monitorId, commitHash, commitAuthor, riskType: analysis.riskType, severity: analysis.severity, description: analysis.description, recommendation: analysis.recommendation },
                 });
                 savedIncidents.push(incident);
-                const monitor = await this.prisma.monitor.findUnique({ where: { id: monitorId } });
                 if (monitor) {
                     await this.notifications.sendSecurityAlert(monitor.notificationWebhookUrl, monitor.name, commitHash, analysis.riskType, analysis.severity, analysis.description, monitor.notificationEmail);
                 }
             }
+            this.logger.log(`Scan complete for ${owner}/${repo}: saved ${savedIncidents.length} new incidents`);
             return { success: true, count: savedIncidents.length };
         }
         catch (error) {

@@ -1,5 +1,9 @@
-export declare class NotificationService {
+import { OnModuleInit } from '@nestjs/common';
+export declare class NotificationService implements OnModuleInit {
     private readonly logger;
+    private transporter;
+    private fromAddress;
+    onModuleInit(): Promise<void>;
     send(webhookUrl: string | null, monitorName: string, monitorUrl: string | null, status: 'down' | 'up', details?: string, email?: string | null): Promise<void>;
     private sendWebhook;
     private sendEmail;

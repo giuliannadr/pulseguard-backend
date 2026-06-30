@@ -135,14 +135,17 @@ let PlaygroundService = PlaygroundService_1 = class PlaygroundService {
                     }
                 });
                 const prompt = `
-        You are a senior API penetration tester. Analyze the following request & response details for security flaws.
-        
-        Request URL: ${url}
-        Request Method: ${method}
-        Response Status: ${status}
-        Response Headers: ${JSON.stringify(responseHeaders)}
-        Response Body (truncated): ${JSON.stringify(responseBody).substring(0, 800)}
-        Error Encountered: ${errorMsg || 'None'}
+        Eres un experto en seguridad de APIs. Analizá los siguientes detalles de solicitud/respuesta y detectá problemas de seguridad.
+        Responde SIEMPRE en español. Sé conciso y directo.
+
+        URL: ${url}
+        Método: ${method}
+        Status HTTP: ${status}
+        Headers de respuesta: ${JSON.stringify(responseHeaders)}
+        Body de respuesta (truncado): ${JSON.stringify(responseBody).substring(0, 800)}
+        Error: ${errorMsg || 'Ninguno'}
+
+        Para cada hallazgo, explicá brevemente el riesgo en una oración. Las recomendaciones deben ser accionables y cortas.
         `;
                 const result = await model.generateContent(prompt);
                 aiAuditReport = JSON.parse(this.cleanJson(result.response.text()));
@@ -190,12 +193,13 @@ let PlaygroundService = PlaygroundService_1 = class PlaygroundService {
                 }
             });
             const prompt = `
-      Perform a static application security testing (SAST) analysis on the following code snippet.
-      Language/Context: ${language}
+      Realizá un análisis SAST del siguiente fragmento de código. Responde SIEMPRE en español.
+      Lenguaje/Contexto: ${language}
 
-      Identify any vulnerabilities, backdoors, dependency risks, hardcoded secrets, or insecure configurations.
+      Identificá vulnerabilidades, secretos hardcodeados, configuraciones inseguras o dependencias riesgosas.
+      Cada hallazgo debe ser una oración corta y directa. Las recomendaciones deben ser accionables.
 
-      Code Snippet:
+      Código:
       ${code}
       `;
             const result = await model.generateContent(prompt);
@@ -298,20 +302,22 @@ let PlaygroundService = PlaygroundService_1 = class PlaygroundService {
                     }
                 });
                 const prompt = `
-        Review the following SSL and DNS security parameters for the domain: ${cleanDomain}
+        Analizá la seguridad de DNS y SSL del dominio: ${cleanDomain}. Responde SIEMPRE en español. Sé conciso.
 
-        DNS Info:
+        DNS:
         - SPF: ${dnsInfo.spf}
         - DMARC: ${dnsInfo.dmarc}
         - MX: ${JSON.stringify(dnsInfo.mx)}
 
-        SSL Info:
-        - Status: ${sslInfo.status}
-        - Subject: ${sslInfo.subject}
-        - Issuer: ${sslInfo.issuer}
-        - Valid From: ${sslInfo.validFrom}
-        - Valid To: ${sslInfo.validTo}
-        - Key bits: ${sslInfo.bits}
+        SSL:
+        - Estado: ${sslInfo.status}
+        - Sujeto: ${sslInfo.subject}
+        - Emisor: ${sslInfo.issuer}
+        - Válido desde: ${sslInfo.validFrom}
+        - Válido hasta: ${sslInfo.validTo}
+        - Bits de clave: ${sslInfo.bits}
+
+        El puntaje de seguridad debe ser una letra (A+, A, B, C, D, F). Los hallazgos deben ser oraciones cortas.
         `;
                 const result = await model.generateContent(prompt);
                 aiReport = JSON.parse(this.cleanJson(result.response.text()));
@@ -446,12 +452,12 @@ let PlaygroundService = PlaygroundService_1 = class PlaygroundService {
                     }
                 });
                 const prompt = `
-        You are a cybersecurity simulation analyst. Review the response to this safe penetration test probe.
-        
-        Attack Vector: ${attackType.toUpperCase()}
-        Description: ${description}
-        Target Tested URL: ${testUrl}
-        Simulation Response Results: ${JSON.stringify(results)}
+        Sos un analista de ciberseguridad. Revisá la respuesta a esta simulación de ataque segura. Responde SIEMPRE en español. Sé conciso y directo.
+
+        Vector de ataque: ${attackType.toUpperCase()}
+        Descripción: ${description}
+        URL testeada: ${testUrl}
+        Resultados: ${JSON.stringify(results)}
 
         Determine whether the target endpoint is vulnerable to this attack vector.
         Guidelines:
@@ -541,14 +547,14 @@ let PlaygroundService = PlaygroundService_1 = class PlaygroundService {
                         }
                     });
                     const prompt = `
-          You are a cloud infrastructure architect. Review the connection timings for this target URL: ${url}
+          Sos un arquitecto de infraestructura cloud. Analizá los tiempos de conexión de esta URL: ${url}. Responde SIEMPRE en español.
           - DNS Lookup: ${timings.dnsLookupMs}ms
-          - TCP Connection: ${timings.tcpConnectMs}ms
+          - TCP: ${timings.tcpConnectMs}ms
           - TLS Handshake: ${timings.tlsHandshakeMs}ms
-          - TTFB (Time to First Byte): ${timings.ttfbMs}ms
-          - Total Latency: ${timings.totalMs}ms
+          - TTFB: ${timings.ttfbMs}ms
+          - Total: ${timings.totalMs}ms
 
-          Provide brief, actionable performance suggestions (e.g. recommend CDN, HTTP/3, Keep-Alive, closer server zones, or DNS providers).
+          Dá 1-2 sugerencias concretas y cortas para mejorar la performance (CDN, HTTP/3, DNS, región de servidor, etc).
           `;
                     const result = await model.generateContent(prompt);
                     const parsed = JSON.parse(this.cleanJson(result.response.text()));

@@ -112,7 +112,7 @@ let MonitorsService = class MonitorsService {
             take: 50,
         });
     }
-    async scanRepo(id, userId, githubToken) {
+    async scanRepo(id, userId, githubToken, force = false) {
         const monitor = await this.findOne(id, userId);
         if (!monitor.githubRepoUrl) {
             throw new Error('This project is not connected to a GitHub repository.');
@@ -127,7 +127,7 @@ let MonitorsService = class MonitorsService {
         if (!owner || !repoName) {
             throw new Error('Invalid GitHub repository URL.');
         }
-        return this.githubService.scanRepoCommits(id, owner, repoName, githubToken);
+        return this.githubService.scanRepoCommits(id, owner, repoName, githubToken, force);
     }
     async getDowntimeHistory(id, userId) {
         await this.findOne(id, userId);

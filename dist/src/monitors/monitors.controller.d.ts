@@ -1,9 +1,11 @@
 import { MonitorsService } from './monitors.service';
+import { NotificationService } from '../notifications/notification.service';
 import { CreateMonitorDto } from './dto/create-monitor.dto';
 import { UpdateMonitorDto } from './dto/update-monitor.dto';
 export declare class MonitorsController {
     private readonly service;
-    constructor(service: MonitorsService);
+    private readonly notifications;
+    constructor(service: MonitorsService, notifications: NotificationService);
     findAll(req: any): import("@prisma/client").Prisma.PrismaPromise<({
         checks: {
             status: string;
@@ -169,7 +171,11 @@ export declare class MonitorsController {
         end: Date | null;
         durationMs: number;
     }[]>;
-    scanRepo(id: string, req: any, githubToken: string): Promise<{
+    testEmail(id: string, req: any): Promise<{
+        ok: boolean;
+        message: string;
+    }>;
+    scanRepo(id: string, req: any, githubToken: string, force?: string): Promise<{
         success: boolean;
         count: number;
     }>;

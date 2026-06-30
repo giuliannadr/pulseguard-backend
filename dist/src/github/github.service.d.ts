@@ -18,7 +18,7 @@ export declare class GithubService {
         simulated: boolean;
         webhookId?: undefined;
     }>;
-    scanRepoCommits(monitorId: string, owner: string, repo: string, githubToken: string): Promise<{
+    scanRepoCommits(monitorId: string, owner: string, repo: string, githubToken: string, force?: boolean): Promise<{
         success: boolean;
         count: number;
     }>;

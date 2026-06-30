@@ -13,12 +13,13 @@ const monitors_controller_1 = require("./monitors.controller");
 const security_incidents_controller_1 = require("./security-incidents.controller");
 const checker_module_1 = require("../checker/checker.module");
 const github_module_1 = require("../github/github.module");
+const notification_module_1 = require("../notifications/notification.module");
 let MonitorsModule = class MonitorsModule {
 };
 exports.MonitorsModule = MonitorsModule;
 exports.MonitorsModule = MonitorsModule = __decorate([
     (0, common_1.Module)({
-        imports: [checker_module_1.CheckerModule, github_module_1.GithubModule],
+        imports: [checker_module_1.CheckerModule, github_module_1.GithubModule, notification_module_1.NotificationModule],
         controllers: [monitors_controller_1.MonitorsController, security_incidents_controller_1.SecurityIncidentsController],
         providers: [monitors_service_1.MonitorsService],
         exports: [monitors_service_1.MonitorsService],
