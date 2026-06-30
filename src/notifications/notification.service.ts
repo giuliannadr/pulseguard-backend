@@ -19,7 +19,7 @@ export class NotificationService implements OnModuleInit {
         auth: { user: testAccount.user, pass: testAccount.pass },
       });
       this.fromAddress = `PulseGuard <${testAccount.user}>`;
-      this.logger.log(`Ethereal SMTP ready — preview emails at https://ethereal.email/messages (user: ${testAccount.user})`);
+      this.logger.log(`Ethereal SMTP ready — user: ${testAccount.user} / pass: ${testAccount.pass} — https://ethereal.email/messages`);
     } catch (err: any) {
       this.logger.warn(`Could not create Ethereal test account: ${err.message} — email notifications disabled`);
     }
