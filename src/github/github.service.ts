@@ -165,23 +165,24 @@ export class GithubService {
         ),
       );
 
-      // Analyze all diffs with Gemini in parallel
-      const analysesSettled = await Promise.allSettled(
-        diffsSettled.map((r) =>
-          this.aiService.analyzeCommit(
-            r.status === 'fulfilled' ? r.value : 'Modified files in repository',
-          ),
-        ),
-      );
+      // Analyze all diffs with Gemini sequentially with a 500ms delay to avoid rate limits
+      const analyses: any[] = [];
+      for (const r of diffsSettled) {
+        const diffText = r.status === 'fulfilled' ? r.value : 'Modified files in repository';
+        const analysis = await this.aiService.analyzeCommit(diffText);
+        analyses.push(analysis);
+        // Wait 500ms between calls
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
 
       // Persist results & notify
       const monitor = await this.prisma.monitor.findUnique({ where: { id: monitorId } });
       const savedIncidents: any[] = [];
 
       for (let i = 0; i < toScan.length; i++) {
-        if (analysesSettled[i].status !== 'fulfilled') continue;
         const item = toScan[i];
-        const analysis = (analysesSettled[i] as PromiseFulfilledResult<any>).value;
+        const analysis = analyses[i];
+        if (!analysis) continue;
         const commitHash = item.sha;
         const commitAuthor = `${item.commit.author.name} <${item.commit.author.email}>`;
 

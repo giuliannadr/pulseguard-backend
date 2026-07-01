@@ -128,14 +128,20 @@ let GithubService = GithubService_1 = class GithubService {
             }
             const diffsSettled = await Promise.allSettled(toScan.map(item => axios_1.default.get(`https://api.github.com/repos/${owner}/${repo}/commits/${item.sha}`, { headers: { Authorization: `Bearer ${githubToken}`, Accept: 'application/vnd.github.v3.diff' } }).then(r => r.data)
                 .catch(() => 'Modified files in repository')));
-            const analysesSettled = await Promise.allSettled(diffsSettled.map((r) => this.aiService.analyzeCommit(r.status === 'fulfilled' ? r.value : 'Modified files in repository')));
+            const analyses = [];
+            for (const r of diffsSettled) {
+                const diffText = r.status === 'fulfilled' ? r.value : 'Modified files in repository';
+                const analysis = await this.aiService.analyzeCommit(diffText);
+                analyses.push(analysis);
+                await new Promise((resolve) => setTimeout(resolve, 500));
+            }
             const monitor = await this.prisma.monitor.findUnique({ where: { id: monitorId } });
             const savedIncidents = [];
             for (let i = 0; i < toScan.length; i++) {
-                if (analysesSettled[i].status !== 'fulfilled')
-                    continue;
                 const item = toScan[i];
-                const analysis = analysesSettled[i].value;
+                const analysis = analyses[i];
+                if (!analysis)
+                    continue;
                 const commitHash = item.sha;
                 const commitAuthor = `${item.commit.author.name} <${item.commit.author.email}>`;
                 const incident = await this.prisma.securityIncident.create({
